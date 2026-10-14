@@ -1,0 +1,29 @@
+# Build & Binaries
+*.exe
+*.out
+*.o
+*.obj
+*.so
+*.dll
+stitch
+stitch.exe
+build/
+bin/
+
+# Colab / Jupyter
+.ipynb_checkpoints/
+
+# IDE & Editor
+.vscode/
+.vs/
+*.swp
+*.swo
+.DS_Store
+
+# Temporary outputs
+*.png
+*.jpg
+*.jpeg
+!dataset/**
+output/
+tmp/
