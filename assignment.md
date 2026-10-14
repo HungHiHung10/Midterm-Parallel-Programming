@@ -48,7 +48,7 @@ Một tệp nén duy nhất: **`GroupXX_Midterm.zip`** gồm:
 #### 1. Trách nhiệm kỹ thuật mã nguồn (C/C++ V0):
 * **Cài đặt Stage 4 - Feature Matching:**
   * Hiện thực thuật toán Brute-Force Matcher tính khoảng cách Hamming giữa các vector descriptor 256-bit của ảnh A và ảnh B.
-  * Tích hợp **Lowe's ratio test** ($d_{\text{best}} / d_{\text{second\_best}} < \text{threshold}$, gợi ý 0.75 - 0.8) để loại bỏ các điểm ghép cặp mơ hồ.
+  * Tích hợp **Lowe's ratio test** ($d_1 / d_2 < \text{threshold}$, với $d_1, d_2$ lần lượt là khoảng cách nhỏ nhất và nhỏ thứ nhì, gợi ý $0.75 - 0.8$) để loại bỏ các điểm ghép cặp mơ hồ.
   * Tùy chọn kiểm tra chéo (Cross-check consistency) để tăng độ tin cậy.
 * **Cài đặt Stage 5 - Homography Estimation with RANSAC:**
   * Thuật toán RANSAC chuẩn: lặp $N$ lần (ví dụ $1000 - 2000$ iterations). Mỗi lần chọn ngẫu nhiên 4 cặp điểm không đồng tuyến.
