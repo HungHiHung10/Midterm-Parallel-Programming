@@ -29,6 +29,122 @@ Một tệp nén duy nhất: **`GroupXX_Midterm.zip`** gồm:
 
 ---
 
+### 1.1 SƠ ĐỒ CẤU TRÚC CÂY TỆP TIN VÀ PHÂN CÔNG THÀNH VIÊN (FILE TREE & DELIVERABLES MATRIX)
+
+Dưới đây là sơ đồ trực quan hóa toàn bộ hệ thống tệp tin **bắt buộc phải có** theo quy định trong đề bài Midterm (`CSC14120_2026_Final Project_MidTerm.pdf`), kèm theo ký hiệu phân công cụ thể cho từng thành viên:
+* `[TV1]`: **Thành viên 1** (Back-end & Algorithmic Core Lead)
+* `[TV2]`: **Thành viên 2** (Front-end & Computer Vision Core Lead)
+* `[TV3]`: **Thành viên 3** (System, Data, Profiling & Notebook Lead)
+* `[TV3*]`: Thành viên 3 chủ trì, phối hợp và thống nhất với cả nhóm
+
+```
+GroupXX_Midterm.zip (Gói nộp bài nén duy nhất theo quy định)
+│
+├── GroupXX_Midterm.ipynb                     # [TV3*] Báo cáo Jupyter Notebook (Lưu đủ outputs, chạy Google Colab)
+│   │
+│   ├── [Ô 1] Setup Cell                      # [TV3] Mount Drive, copy src/ vào /content/, biên dịch binary CLI
+│   │
+│   ├── 3.1 Team Information & Work Plan      # [TV3] Bảng Họ tên, MSSV, vai trò & lộ trình từ V0 đến Cuối kỳ
+│   │
+│   ├── 3.2 Problem Understanding             # [TV2: Stage 1-3 | TV1: Stage 4-6] Thấu hiểu 6 giai đoạn ghép ảnh
+│   │
+│   ├── 3.3 Chosen Methods & Parameters       # [TV2: Stage 1-3 | TV1: Stage 4-6] Thuật toán, tham số, lý giải GPU
+│   │   ├── Stage 1: Preprocessing            # [TV2] Grayscale (Rec. 601), Gaussian Blur 5x5 (tách rời 1D)
+│   │   ├── Stage 2: Keypoint Detection       # [TV2] FAST / Harris + Non-Maximum Suppression (NMS) + Top-K
+│   │   ├── Stage 3: Feature Description      # [TV2] BRIEF 256-bit nhị phân, mẫu lấy mẫu chuẩn Gaussian
+│   │   ├── Stage 4: Feature Matching         # [TV1] Brute-Force khoảng cách Hamming + Lowe's ratio test
+│   │   ├── Stage 5: Homography Estimation    # [TV1] RANSAC 4-point DLT (Khử Gauss/SVD) + inlier refinement
+│   │   └── Stage 6: Warping & Blending       # [TV1] Inverse Warping + Bilinear Interpolation + Feathering Blending
+│   │
+│   ├── 3.4 Sequential Version (V0)           # [TV3] Mô tả kiến trúc V0, cách các stage kết nối, trích dẫn nguồn mã mở
+│   │
+│   ├── 3.5 V0 Results and Profiling          # [TV3] Toàn bộ kết quả thực nghiệm và số liệu đo đạc
+│   │   ├── Correctness Evaluation            # [TV3] Đo Homography error trên cặp synthetic so với ground-truth
+│   │   ├── Panoramas Visuals (4 ảnh)         # [TV3*] Hiển thị 4 ảnh panorama kết quả (mỗi site ít nhất 1 ảnh)
+│   │   ├── Per-Stage Timing Table            # [TV3] Bảng thời gian 6 giai đoạn ở 3 độ phân giải (Small, Med, Large)
+│   │   ├── Performance Scaling Chart         # [TV3] Biểu đồ trực quan hóa thời gian thay đổi theo độ phân giải
+│   │   ├── Hot Stages Identification         # [TV3] Xác định giai đoạn chiếm nhiều thời gian nhất (thắt nút cổ chai)
+│   │   └── Amdahl Speedup Estimate           # [TV3] Tính toán tỷ lệ p và giới hạn tăng tốc lý thuyết 1/(1-p)
+│   │
+│   ├── 3.6 Dataset Documentation             # [TV3] Bảng mô tả 4 registered sites (indoor, outdoor, custom, challenge)
+│   │   ├── Site 1 (Indoor)                   # [TV3] Tên địa điểm, đặc điểm khung cảnh, lý do chọn, ánh sáng
+│   │   ├── Site 2 (Outdoor)                  # [TV3] Tên địa điểm, đặc điểm khung cảnh, lý do chọn, ánh sáng
+│   │   ├── Site 3 (Custom)                   # [TV3] Tên địa điểm, đặc điểm khung cảnh, lý do chọn, ánh sáng
+│   │   ├── Site 4 (Challenging)              # [TV3] Thử thách: bề mặt lặp lại / thiếu chi tiết / ánh sáng yếu
+│   │   └── Google Drive Public Link          # [TV3] Link công khai chứa raw photos + prepared dataset (24 ảnh)
+│   │
+│   └── 3.7 GPU Acceleration Plan             # [TV2: Stage 1-3 | TV1: Stage 4-6] Kế hoạch song song hóa trên GPU
+│       ├── Stages selected for GPU           # [Cả nhóm] Chọn các stage tăng tốc dựa trên phân tích ở mục 3.5
+│       ├── V1 Thread Mapping                 # [TV2: Stage 1-3 | TV1: Stage 4-6] Ánh xạ luồng cụ thể (thread/warp/block)
+│       ├── V2/V3 Optimization Ideas          # [TV2: Shared Mem, Scan | TV1: Warp-shuffle, Texture, __popc]
+│       └── Technical Risks & Mitigation      # [TV2: Non-coalesced access | TV1: Warp divergence, Canvas overhead]
+│
+├── src/                                      # [Toàn nhóm] Mã nguồn C/C++/CUDA độc lập (One source of truth)
+│   ├── common.h                              # [TV3*] Struct dữ liệu dùng chung (Image, Keypoint, Match, H), Timer, Log
+│   ├── cuda_utils.cuh                        # [TV3] Tiện ích CUDA: macro CHECK_CUDA, GpuTimer cho các phiên bản tiếp theo
+│   ├── versions.h                            # [TV3] Khai báo prototypes giao diện các phiên bản (run_v0, run_v1, ...)
+│   ├── main.cu                               # [TV3] CLI Driver: phân tích argv, nạp ảnh, gọi V0, đo benchmark, lưu ảnh
+│   ├── stb_impl.cpp                          # [TV3] File triển khai nạp thư viện đọc/ghi ảnh stb_image
+│   ├── stb_image.h                           # [TV3 tích hợp] Thư viện mã mở nạp ảnh PNG/JPG/PNM
+│   ├── stb_image_write.h                     # [TV3 tích hợp] Thư viện mã mở xuất ảnh PNG/JPG/PNM
+│   │
+│   ├── v0_frontend.cpp                       # [TV2] Module C++ tuần tự thực hiện các giai đoạn 1, 2, 3
+│   │   ├── Header Chú thích                  # [TV2] Ghi rõ tên tác giả và các nguồn mã mở được tham khảo/chuyển thể
+│   │   ├── Stage 1: rgb2gray & gaussian_blur # [TV2] Chuyển đổi mức xám và lọc tách rời 1D Gauss 5x5
+│   │   ├── Stage 2: fast_detect & nms_topk   # [TV2] Nhận diện góc FAST/Harris + lọc NMS 3x3 + chọn Top-K điểm
+│   │   └── Stage 3: brief_compute_desc       # [TV2] Trích xuất vector mô tả đặc trưng nhị phân BRIEF 256-bit
+│   │
+│   ├── v0_backend.cpp                        # [TV1] Module C++ tuần tự thực hiện các giai đoạn 4, 5, 6
+│   │   ├── Header Chú thích                  # [TV1] Ghi rõ tên tác giả và các nguồn mã mở được tham khảo/chuyển thể
+│   │   ├── Stage 4: brute_force_hamming      # [TV1] So khớp đặc trưng nhị phân + Lowe's ratio test (d1/d2 < 0.75)
+│   │   ├── Stage 5: ransac_homography        # [TV1] RANSAC 4 điểm DLT (Gauss/SVD) + đếm inliers + tinh chỉnh H
+│   │   └── Stage 6: inverse_warp_blend       # [TV1] Inverse Warping + Bilinear Interpolation + Feathering Blending
+│   │
+│   └── v0_stitching.cpp                      # [TV3 tích hợp] Hàm tích hợp run_v0(...) kết nối toàn bộ 6 giai đoạn
+│
+└── dataset/ (Thư mục chuẩn bị dữ liệu — Lưu trữ trên Google Drive & Local test)
+    ├── synthetic/                            # [TV3] Bộ dữ liệu nhân tạo kiểm thử tính đúng đắn (Correctness)
+    │   ├── synthetic_left.png                # [TV3] Ảnh nhân tạo A
+    │   ├── synthetic_right.png               # [TV3] Ảnh nhân tạo B
+    │   └── H_ground_truth.txt                # [TV3] Ma trận $3\times3$ chuẩn để tính sai số Homography Error
+    │
+    ├── raw/                                  # [TV3] Toàn bộ ảnh gốc chụp từ máy ảnh/điện thoại (chưa qua xử lý)
+    │   ├── site1_indoor/                     # [TV3] Cặp ảnh gốc địa điểm trong nhà
+    │   ├── site2_outdoor/                    # [TV3] Cặp ảnh gốc địa điểm ngoài trời
+    │   ├── site3_custom/                     # [TV3] Cặp ảnh gốc địa điểm tự chọn
+    │   └── site4_challenging/                # [TV3] Cặp ảnh gốc thử thách (thiếu sáng / lặp vân / ít chi tiết)
+    │
+    ├── prepared/                             # [TV3] Đúng 24 ảnh chuẩn tỷ lệ 16:9 ở 3 độ phân giải
+    │   ├── small/ (1280 x 720)               # [TV3] 4 cặp (8 ảnh) dùng đo thời gian kích thước nhỏ
+    │   ├── medium/ (1920 x 1080)             # [TV3] 4 cặp (8 ảnh) dùng đo thời gian vừa & xuất 4 panorama
+    │   └── large/ (3840 x 2160)              # [TV3] 4 cặp (8 ảnh) dùng đo thời gian kích thước lớn
+    │
+    └── outputs_v0/                           # [TV3*] 4 ảnh panorama kết quả do V0 tạo ra (đưa vào Notebook 3.5)
+        ├── panorama_site1.png                # [TV3 chạy / TV1 & TV2 code] Kết quả ghép cảnh Trong nhà
+        ├── panorama_site2.png                # [TV3 chạy / TV1 & TV2 code] Kết quả ghép cảnh Ngoài trời
+        ├── panorama_site3.png                # [TV3 chạy / TV1 & TV2 code] Kết quả ghép cảnh Tự chọn
+        └── panorama_site4.png                # [TV3 chạy / TV1 & TV2 code] Kết quả ghép cảnh Thử thách
+```
+
+#### Ma trận đối chiếu Trách nhiệm theo từng Tệp tin & Mục tiêu Đề tài (Deliverables Matrix):
+
+| Tệp tin / Thành phần | Thành viên phụ trách chính | Nội dung & Vai trò cụ thể | Điều khoản PDF (`MidTerm.pdf`) |
+| :--- | :---: | :--- | :--- |
+| **`v0_frontend.cpp`** | **Thành viên 2** | Cài đặt Stage 1 (Grayscale, Blur 5x5), Stage 2 (FAST/Harris, NMS, Top-K), Stage 3 (BRIEF 256-bit). Chú thích tác giả và nguồn tham khảo ở đầu file. | Mục 2 & Mục 3.4 (Sequential Version V0) |
+| **`v0_backend.cpp`** | **Thành viên 1** | Cài đặt Stage 4 (BF Hamming, Lowe's ratio test), Stage 5 (RANSAC 4-point DLT, inliers refinement), Stage 6 (Inverse Warping, Bilinear, Linear Feathering). Chú thích tác giả ở đầu file. | Mục 2 & Mục 3.4 (Sequential Version V0) |
+| **`common.h`**, **`versions.h`** | **Thành viên 3** | Định nghĩa cấu trúc dữ liệu hình ảnh, keypoint, descriptor, ma trận chuyển đổi; giao diện hàm `run_v0(...)`. | Mục 2 (What to submit - `src/`) |
+| **`cuda_utils.cuh`** | **Thành viên 3** | Macro kiểm tra lỗi CUDA (`CHECK_CUDA`) và lớp tiện ích đo thời gian GPU (`GpuTimer`) sẵn sàng cho các bản V1/V2. | Mục 2 (What to submit - `src/`) |
+| **`main.cu`**, **`stb_impl.cpp`** | **Thành viên 3** | CLI driver nạp ảnh, điều hướng tham số `--version 0 --runs N`, tích hợp bộ đo thời gian `high_resolution_clock`, xuất kết quả. | Mục 2 & Mục 4 (One source of truth) |
+| **`v0_stitching.cpp`** | **Thành viên 3** | Tích hợp frontend của TV2 và backend của TV1 thành pipeline `run_v0` hoàn chỉnh. | Mục 3.4 (V0 single-threaded C/C++) |
+| **`dataset/` (24 ảnh + Synthetic)** | **Thành viên 3** | Chụp 4 cặp ảnh, crop 16:9, tạo 24 ảnh theo 3 độ phân giải (Small, Medium, Large); tải synthetic pair; upload Google Drive. | Mục 2 & Mục 3.6 (Dataset & Registered sites) |
+| **`outputs_v0/` (4 Panoramas)** | **Thành viên 3** *(chạy V0)* | Chạy chương trình V0 trên 4 cặp ảnh Medium để tạo ra 4 ảnh panorama thành phẩm (1 ảnh cho mỗi site). | Mục 3.5 (Panoramas: one output per site) |
+| **`GroupXX_Midterm.ipynb`** | **Thành viên 3** *(chủ trì)* | Tổ chức cấu trúc notebook, viết setup cell Colab, tổng hợp bảng số liệu, vẽ đồ thị, tính Amdahl, tích hợp nội dung của TV1 & TV2. | Mục 2, 3 & 4 (Reproducible, All outputs saved) |
+| **Mục 3.2, 3.3, 3.7 (Stages 1–3)** | **Thành viên 2** | Thấu hiểu bài toán, lý giải thuật toán & tính phù hợp GPU, kế hoạch thread mapping V1, ý tưởng tối ưu V2/V3 cho Stages 1–3. | Mục 3.2, 3.3, 3.7 |
+| **Mục 3.2, 3.3, 3.7 (Stages 4–6)** | **Thành viên 1** | Thấu hiểu bài toán, lý giải thuật toán & tính phù hợp GPU, kế hoạch thread mapping V1, ý tưởng tối ưu V2/V3 cho Stages 4–6. | Mục 3.2, 3.3, 3.7 |
+| **Mục 3.1, 3.4, 3.5, 3.6** | **Thành viên 3** | Viết thông tin nhóm & work plan (3.1), kiến trúc V0 (3.4), kết quả profiling & Amdahl (3.5), mô tả 4 registered sites (3.6). | Mục 3.1, 3.4, 3.5, 3.6 |
+
+---
+
 ## 2. KIẾN TRÚC PIPELINE GHÉP ẢNH (6 GIAI ĐOẠN)
 
 ```
