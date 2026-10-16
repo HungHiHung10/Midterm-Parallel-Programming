@@ -20,10 +20,30 @@ bin/
 *.swo
 .DS_Store
 
-# Temporary outputs
+# Dataset binaries are distributed through the public Drive link, not Git.
+# Keep the directory skeleton, documentation, and reproducibility manifest.
+dataset/raw/*/*
+!dataset/raw/*/.gitkeep
+dataset/prepared/**/*.png
+dataset/prepared/**/*.jpg
+dataset/prepared/**/*.jpeg
+dataset/synthetic/*.png
+dataset/synthetic/*.jpg
+dataset/synthetic/*.jpeg
+dataset/synthetic/H_ground_truth.txt
+dataset/synthetic/provenance.json
+
+# Generated benchmark artifacts. The executed notebook already embeds the
+# required tables, charts, and panorama previews.
+outputs_v0/*
+!outputs_v0/.gitkeep
+
+# Other generated files
 *.png
 *.jpg
 *.jpeg
-!dataset/**
 output/
 tmp/
+.tools/
+__pycache__/
+dist/

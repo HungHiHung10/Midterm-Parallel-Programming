@@ -1,7 +1,7 @@
 // ============================================================================
 // CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
 // Module: v0_backend.cpp (Sequential Stages 4, 5, 6)
-// Author: [Điền tên Thành viên 1] (MSSV: [Điền MSSV])
+// Author: Tran Nguyen Minh Quan - 23120342 (Member 1)
 // Lead Role: Back-end & Algorithmic Core Lead
 //
 // References & Citations:

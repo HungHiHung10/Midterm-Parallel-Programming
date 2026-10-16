@@ -1,207 +1,145 @@
-// ============================================================================
-// CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
-// CLI Driver & Benchmark Runner: main.cu
-// Author: [Điền tên Thành viên 3] (MSSV: [Điền MSSV])
-// Lead Role: System, Data, Profiling & Notebook Lead
-//
-// Usage:
-//   ./stitch <left_image> <right_image> <output_image> --version 0 [--runs N] [--save-h <h_file>]
-// ============================================================================
-
+// Author: Nguyen Huu Khanh Hung - 23120271 (Member 3). Original CLI; stb I/O: MIT/public domain.
 #include "versions.h"
+#include "logging.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <vector>
-#include <fstream>
-#include <numeric>
 #include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <iomanip>
+#include <limits>
+#include <memory>
+#include <stdexcept>
 
-static void print_usage(const char* prog_name) {
-    std::cout << "Usage:\n"
-              << "  " << prog_name << " <left_img> <right_img> <out_img> --version <0|1|2|3> [--runs N] [--save-h <file>]\n\n"
-              << "Parameters:\n"
-              << "  left_img    : Path to left input image (PNG/JPG)\n"
-              << "  right_img   : Path to right input image (PNG/JPG)\n"
-              << "  out_img     : Path to output stitched panorama image\n"
-              << "  --version V : Pipeline version (0: Sequential, 1: Basic CUDA, 2: Shared Mem, 3: Advanced)\n"
-              << "  --runs N    : Number of benchmark runs (default: 1)\n"
-              << "  --save-h F  : (Optional) Save 3x3 homography matrix to text file for correctness test\n";
+static const char* names[] = {"preprocess_ms", "keypoint_ms", "descriptor_ms",
+    "matching_ms", "ransac_ms", "warp_blend_ms", "total_pipeline_ms"};
+static const double StageTimings::* fields[] = {
+    &StageTimings::stage1_preprocess_ms, &StageTimings::stage2_keypoint_ms,
+    &StageTimings::stage3_descriptor_ms, &StageTimings::stage4_matching_ms,
+    &StageTimings::stage5_ransac_ms, &StageTimings::stage6_warp_blend_ms,
+    &StageTimings::total_pipeline_ms};
+static void usage(const char* name) {
+    std::cout << "Usage: " << name << " <left> <right> <output.png|jpg> --version 0\n"
+        "  [--runs N] [--warmup N] [--save-h FILE] [--timings-csv FILE]\n"
+        "Runs must be positive; warmup defaults to 0 and is excluded from statistics.\n"
+        "H maps right (B) to left (A). Set NO_COLOR to disable colors.\n";
 }
-
-static bool load_image(const std::string& path, ImageRGB& img) {
-    int w, h, channels;
-    uint8_t* raw = stbi_load(path.c_str(), &w, &h, &channels, 3);
-    if (!raw) {
-        std::cerr << "[Error] Cannot load image: " << path << " (" << stbi_failure_reason() << ")\n";
-        return false;
-    }
-    img.width = w;
-    img.height = h;
-    img.channels = 3;
-    img.data.assign(raw, raw + (w * h * 3));
-    stbi_image_free(raw);
-    return true;
+static int integer(const std::string& text, int minimum) {
+    size_t end = 0;
+    int value = std::stoi(text, &end);
+    if (end != text.size() || value < minimum)
+        throw std::runtime_error("Invalid integer: " + text);
+    return value;
 }
-
-static bool save_image(const std::string& path, const ImageRGB& img) {
-    int res = 0;
-    // Determine format by extension
-    if (path.size() >= 4 && path.substr(path.size() - 4) == ".jpg") {
-        res = stbi_write_jpg(path.c_str(), img.width, img.height, 3, img.data.data(), 95);
-    } else {
-        res = stbi_write_png(path.c_str(), img.width, img.height, 3, img.data.data(), img.width * 3);
-    }
-    if (!res) {
-        std::cerr << "[Error] Failed to save output image to: " << path << "\n";
-        return false;
-    }
-    return true;
+static ImageRGB load(const std::string& path) {
+    ImageRGB image;
+    int channels = 0;
+    std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> pixels(
+        stbi_load(path.c_str(), &image.width, &image.height, &channels, 3), stbi_image_free);
+    if (!pixels) throw std::runtime_error("Cannot load " + path + ": " + stbi_failure_reason());
+    image.data.assign(pixels.get(), pixels.get() + size_t(image.width) * image.height * 3);
+    return image;
 }
-
+static void check_stream(std::ofstream& file, const std::string& path) {
+    file.flush();
+    if (!file) throw std::runtime_error("Cannot write " + path);
+}
 int main(int argc, char** argv) {
-    if (argc < 5) {
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    std::string left_path = argv[1];
-    std::string right_path = argv[2];
-    std::string out_path = argv[3];
-
-    int version = 0;
-    int runs = 1;
-    std::string save_h_path = "";
-
-    for (int i = 4; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--version" && i + 1 < argc) {
-            version = std::stoi(argv[++i]);
-        } else if (arg == "--runs" && i + 1 < argc) {
-            runs = std::max(1, std::stoi(argv[++i]));
-        } else if (arg == "--save-h" && i + 1 < argc) {
-            save_h_path = argv[++i];
+    init_logging();
+    try {
+        if (argc == 2 && std::string(argv[1]) == "--help") { usage(argv[0]); return 0; }
+        if (argc < 6) { usage(argv[0]); throw std::runtime_error("Missing required arguments"); }
+        int runs = 1, warmup = 0;
+        bool has_version = false;
+        std::string h_path, csv_path;
+        for (int i = 4; i < argc; ++i) {
+            const std::string option = argv[i];
+            if (option != "--version" && option != "--runs" && option != "--warmup" &&
+                option != "--save-h" && option != "--timings-csv")
+                throw std::runtime_error("Unknown option: " + option);
+            if (++i >= argc) throw std::runtime_error("Missing value for " + option);
+            const std::string value = argv[i];
+            if (option == "--version") {
+                if (integer(value, 0) != 0) throw std::runtime_error("Only V0 is implemented");
+                has_version = true;
+            } else if (option == "--runs") runs = integer(value, 1);
+            else if (option == "--warmup") warmup = integer(value, 0);
+            else if (option == "--save-h") h_path = value;
+            else csv_path = value;
         }
-    }
-
-    std::cout << "=================================================================\n"
-              << " CSC14120 - Panorama Stitching Benchmark\n"
-              << " Left Image : " << left_path << "\n"
-              << " Right Image: " << right_path << "\n"
-              << " Output Path: " << out_path << "\n"
-              << " Version    : V" << version << "\n"
-              << " Runs       : " << runs << "\n"
-              << "=================================================================\n";
-
-    ImageRGB imgA, imgB;
-    if (!load_image(left_path, imgA) || !load_image(right_path, imgB)) {
-        return 1;
-    }
-
-    std::cout << "[Info] Image A: " << imgA.width << "x" << imgA.height << " (" << imgA.channels << " channels)\n";
-    std::cout << "[Info] Image B: " << imgB.width << "x" << imgB.height << " (" << imgB.channels << " channels)\n\n";
-
-    std::vector<StageTimings> all_timings(runs);
-    ImageRGB final_panorama;
-    Homography3x3 finalH;
-    bool success = false;
-
-    for (int r = 0; r < runs; ++r) {
-        ImageRGB pano;
-        Homography3x3 H;
-        StageTimings t;
-
-        if (version == 0) {
-            success = run_v0(imgA, imgB, pano, t, &H);
-        } else {
-            std::cerr << "[Error] Version V" << version << " is not implemented yet in Midterm.\n";
-            return 1;
+        if (!has_version) throw std::runtime_error("--version 0 is required");
+        std::string output = argv[3];
+        auto dot = output.find_last_of('.');
+        std::string extension = dot == std::string::npos ? "" : output.substr(dot);
+        std::transform(extension.begin(), extension.end(), extension.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (extension != ".png" && extension != ".jpg" && extension != ".jpeg")
+            throw std::runtime_error("Output extension must be PNG or JPEG");
+        for (const auto& destination : {output, h_path, csv_path}) {
+            if (!destination.empty() && (destination == argv[1] || destination == argv[2]))
+                throw std::runtime_error("Output must not overwrite an input");
         }
-
-        if (!success) {
-            std::cerr << "[Error] Stitching pipeline failed at run " << (r + 1) << "\n";
-            return 1;
+        if ((!h_path.empty() && h_path == output) || (!csv_path.empty() &&
+            (csv_path == output || csv_path == h_path)))
+            throw std::runtime_error("Output paths must be distinct");
+        const ImageRGB a = load(argv[1]), b = load(argv[2]);
+        log_message(LogLevel::Process) << "V0: A=" << a.width << 'x' << a.height
+            << ", B=" << b.width << 'x' << b.height << ", runs=" << runs
+            << ", warmup=" << warmup << '\n';
+        if (runs < 5) log_message(LogLevel::Warn) << "Use --runs 5 or more for the report\n";
+        ImageRGB panorama;
+        Homography3x3 h;
+        std::vector<StageTimings> samples;
+        for (int i = 0; i < warmup; ++i) {
+            StageTimings ignored;
+            if (!run_v0(a, b, panorama, ignored, &h)) throw std::runtime_error("Warmup failed");
         }
-
-        all_timings[r] = t;
-        if (r == runs - 1) {
-            final_panorama = std::move(pano);
-            finalH = H;
+        for (int i = 0; i < runs; ++i) {
+            log_message(LogLevel::Process) << "Run " << i + 1 << '/' << runs << '\n';
+            StageTimings time;
+            if (!run_v0(a, b, panorama, time, &h)) throw std::runtime_error("V0 pipeline failed");
+            samples.push_back(time);
         }
-    }
-
-    // Compute Mean & Min per stage
-    StageTimings mean_t, min_t;
-    min_t.stage1_preprocess_ms = 1e9;
-    min_t.stage2_keypoint_ms = 1e9;
-    min_t.stage3_descriptor_ms = 1e9;
-    min_t.stage4_matching_ms = 1e9;
-    min_t.stage5_ransac_ms = 1e9;
-    min_t.stage6_warp_blend_ms = 1e9;
-    min_t.total_pipeline_ms = 1e9;
-
-    for (const auto& t : all_timings) {
-        mean_t.stage1_preprocess_ms += t.stage1_preprocess_ms;
-        mean_t.stage2_keypoint_ms   += t.stage2_keypoint_ms;
-        mean_t.stage3_descriptor_ms += t.stage3_descriptor_ms;
-        mean_t.stage4_matching_ms   += t.stage4_matching_ms;
-        mean_t.stage5_ransac_ms     += t.stage5_ransac_ms;
-        mean_t.stage6_warp_blend_ms += t.stage6_warp_blend_ms;
-        mean_t.total_pipeline_ms    += t.total_pipeline_ms;
-
-        min_t.stage1_preprocess_ms = std::min(min_t.stage1_preprocess_ms, t.stage1_preprocess_ms);
-        min_t.stage2_keypoint_ms   = std::min(min_t.stage2_keypoint_ms, t.stage2_keypoint_ms);
-        min_t.stage3_descriptor_ms = std::min(min_t.stage3_descriptor_ms, t.stage3_descriptor_ms);
-        min_t.stage4_matching_ms   = std::min(min_t.stage4_matching_ms, t.stage4_matching_ms);
-        min_t.stage5_ransac_ms     = std::min(min_t.stage5_ransac_ms, t.stage5_ransac_ms);
-        min_t.stage6_warp_blend_ms = std::min(min_t.stage6_warp_blend_ms, t.stage6_warp_blend_ms);
-        min_t.total_pipeline_ms    = std::min(min_t.total_pipeline_ms, t.total_pipeline_ms);
-    }
-
-    mean_t.stage1_preprocess_ms /= runs;
-    mean_t.stage2_keypoint_ms   /= runs;
-    mean_t.stage3_descriptor_ms /= runs;
-    mean_t.stage4_matching_ms   /= runs;
-    mean_t.stage5_ransac_ms     /= runs;
-    mean_t.stage6_warp_blend_ms /= runs;
-    mean_t.total_pipeline_ms    /= runs;
-
-    // Print Timing Table
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << "+---------------------------------------+---------------+---------------+\n";
-    std::cout << "| Pipeline Stage                        | Mean Time(ms) | Min Time (ms) |\n";
-    std::cout << "+---------------------------------------+---------------+---------------+\n";
-    std::cout << "| Stage 1: Preprocessing (Gray + Blur)  | " << std::setw(13) << mean_t.stage1_preprocess_ms << " | " << std::setw(13) << min_t.stage1_preprocess_ms << " |\n";
-    std::cout << "| Stage 2: Keypoints (FAST + NMS)       | " << std::setw(13) << mean_t.stage2_keypoint_ms   << " | " << std::setw(13) << min_t.stage2_keypoint_ms   << " |\n";
-    std::cout << "| Stage 3: Descriptors (BRIEF 256-bit)  | " << std::setw(13) << mean_t.stage3_descriptor_ms << " | " << std::setw(13) << min_t.stage3_descriptor_ms << " |\n";
-    std::cout << "| Stage 4: Matching (BF Hamming + Ratio)| " << std::setw(13) << mean_t.stage4_matching_ms   << " | " << std::setw(13) << min_t.stage4_matching_ms   << " |\n";
-    std::cout << "| Stage 5: Homography (RANSAC 4-pt DLT) | " << std::setw(13) << mean_t.stage5_ransac_ms     << " | " << std::setw(13) << min_t.stage5_ransac_ms     << " |\n";
-    std::cout << "| Stage 6: Warping & Feathering Blend   | " << std::setw(13) << mean_t.stage6_warp_blend_ms << " | " << std::setw(13) << min_t.stage6_warp_blend_ms << " |\n";
-    std::cout << "+---------------------------------------+---------------+---------------+\n";
-    std::cout << "| Total Execution Time                  | " << std::setw(13) << mean_t.total_pipeline_ms    << " | " << std::setw(13) << min_t.total_pipeline_ms    << " |\n";
-    std::cout << "+---------------------------------------+---------------+---------------+\n\n";
-
-    // Save Panorama image
-    if (!save_image(out_path, final_panorama)) {
-        return 1;
-    }
-    std::cout << "[Success] Panorama saved to: " << out_path << " (" << final_panorama.width << "x" << final_panorama.height << ")\n";
-
-    // Save Homography if requested
-    if (!save_h_path.empty()) {
-        std::ofstream h_file(save_h_path);
-        if (h_file.is_open()) {
-            for (int r = 0; r < 3; ++r) {
-                h_file << finalH.h[r * 3 + 0] << " "
-                       << finalH.h[r * 3 + 1] << " "
-                       << finalH.h[r * 3 + 2] << "\n";
+        std::cout << std::fixed << std::setprecision(6)
+                  << "Stage                       Mean (ms)      Min (ms)\n";
+        for (int f = 0; f < 7; ++f) {
+            double sum = 0, minimum = std::numeric_limits<double>::infinity();
+            for (const auto& sample : samples) {
+                sum += sample.*fields[f]; minimum = std::min(minimum, sample.*fields[f]);
             }
-            h_file.close();
-            std::cout << "[Success] Estimated Homography saved to: " << save_h_path << "\n";
+            std::cout << std::left << std::setw(26) << names[f] << std::right
+                << std::setw(12) << sum / runs << std::setw(14) << minimum << '\n';
         }
+        int saved = extension == ".png"
+            ? stbi_write_png(output.c_str(), panorama.width, panorama.height, 3,
+                             panorama.data.data(), panorama.width * 3)
+            : stbi_write_jpg(output.c_str(), panorama.width, panorama.height, 3,
+                             panorama.data.data(), 95);
+        if (!saved) throw std::runtime_error("Cannot save panorama: " + output);
+        if (!h_path.empty()) {
+            std::ofstream file(h_path);
+            file << std::setprecision(17);
+            for (int r = 0; r < 3; ++r)
+                file << h.h[3*r] << ' ' << h.h[3*r+1] << ' ' << h.h[3*r+2] << '\n';
+            check_stream(file, h_path);
+        }
+        if (!csv_path.empty()) {
+            std::ofstream file(csv_path);
+            file << "run";
+            for (auto name : names) file << ',' << name;
+            file << '\n' << std::setprecision(17);
+            for (size_t i = 0; i < samples.size(); ++i) {
+                file << i + 1;
+                for (auto field : fields) file << ',' << samples[i].*field;
+                file << '\n';
+            }
+            check_stream(file, csv_path);
+        }
+        log_message(LogLevel::Success) << "Saved " << output << " ("
+            << panorama.width << 'x' << panorama.height << ")\n";
+        return 0;
+    } catch (const std::exception& error) {
+        log_message(LogLevel::Error) << error.what() << '\n';
+        return 1;
     }
-
-    return 0;
 }

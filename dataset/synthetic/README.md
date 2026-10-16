@@ -1,18 +1,15 @@
-# Synthetic Test Dataset (Correctness Evaluation)
+﻿# Synthetic fixture hiện tại
 
-Thư mục này dùng để lưu trữ cặp ảnh nhân tạo và ma trận Ground-truth Homography:
+`synthetic_left.png` và `synthetic_right.png` là hai crop 640×480 của một cảnh hình học tự sinh (seed 14120), dịch ngang 320 px, chồng lấp 50%. Không tải từ tài nguyên môn học; không phải cặp synthetic chính thức. Dùng để kiểm tra tích hợp đủ sáu stage và chiều ma trận.
 
-1. `synthetic_left.png`: Ảnh nhân tạo bên trái.
-2. `synthetic_right.png`: Ảnh nhân tạo bên phải (được biến đổi từ ảnh gốc bằng ma trận $H_{GT}$).
-3. `H_ground_truth.txt`: Tệp văn bản chứa ma trận $3 \times 3$ chuẩn (lưu theo dạng ma trận 3 dòng, mỗi dòng 3 số thực phân cách bằng dấu cách):
-```
-h11 h12 h13
-h21 h22 h23
-h31 h32 h33
+`H_ground_truth.txt` là ma trận 3×3 row-major **B (right) → A (left)**:
+
+```text
+1 0 320
+0 1 0
+0 0 1
 ```
 
-Khi chạy chương trình:
-```bash
-./src/stitch dataset/synthetic/synthetic_left.png dataset/synthetic/synthetic_right.png outputs_v0/synthetic_pano.png --version 0 --save-h outputs_v0/H_estimated.txt
-```
-Notebook sẽ đọc `H_ground_truth.txt` và `H_estimated.txt` để tính chuẩn sai số Frobenius Norm hoặc điểm chiếu trung bình (Projection Error) theo yêu cầu mục 3.5.
+`provenance.json` ghi nguồn, seed và chiều H. Sai số được tính sau khi chuẩn hóa H[2,2]=1 bằng Frobenius và sai số chiếu trung bình/tối đa trên lưới điểm. Threshold mean 1 px là tiêu chí kiểm thử nội bộ.
+
+Khi nhận được cặp chính thức, thay cả hai ảnh và H, sửa provenance (gồm nguồn/URL nếu có), đảm bảo chiều H B→A. Không dùng kết quả dịch chuyển để kết luận pipeline đúng cho mọi homography. Chạy lại notebook để tạo kết quả thật của dữ liệu mới.

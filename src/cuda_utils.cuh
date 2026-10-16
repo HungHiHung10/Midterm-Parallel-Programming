@@ -1,66 +1,40 @@
+// Author: Nguyen Huu Khanh Hung - 23120271 (Member 3). Original CUDA utilities, NVIDIA Runtime API.
 #pragma once
-#include <cstdio>
-#include <cstdlib>
-
-// ============================================================================
-// CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
-// CUDA Utilities & Error Checking Macros
-// Author: Group XX (Lead: Member 3)
-// ============================================================================
-
+#include "logging.h"
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
-
-#define CHECK_CUDA(call)                                                      \
-{                                                                             \
-    const cudaError_t error = call;                                           \
-    if (error != cudaSuccess) {                                               \
-        fprintf(stderr, "CUDA Error: %s:%d, code: %d, reason: %s\n",         \
-                __FILE__, __LINE__, error, cudaGetErrorString(error));        \
-        exit(EXIT_FAILURE);                                                   \
-    }                                                                         \
+#include <stdexcept>
+inline void check_cuda(cudaError_t result, const char* file, int line) {
+    if (result != cudaSuccess) {
+        log_message(LogLevel::Error) << file << ':' << line << ": "
+                                     << cudaGetErrorString(result) << '\n';
+        throw std::runtime_error(cudaGetErrorString(result));
+    }
 }
-
-#define CHECK_KERNEL_ASYNC()                                                  \
-{                                                                             \
-    cudaError_t errSync = cudaGetLastError();                                 \
-    cudaError_t errAsync = cudaDeviceSynchronize();                           \
-    if (errSync != cudaSuccess) {                                             \
-        fprintf(stderr, "Sync kernel error: %s\n", cudaGetErrorString(errSync)); \
-    }                                                                         \
-    if (errAsync != cudaSuccess) {                                            \
-        fprintf(stderr, "Async kernel error: %s\n", cudaGetErrorString(errAsync)); \
-    }                                                                         \
-}
-
+#define CHECK_CUDA(call) do { check_cuda((call), __FILE__, __LINE__); } while (0)
+// Despite the historical name, this helper synchronizes for error diagnosis.
+#define CHECK_KERNEL_ASYNC() do { CHECK_CUDA(cudaGetLastError()); \
+                                  CHECK_CUDA(cudaDeviceSynchronize()); } while (0)
 struct GpuTimer {
-    cudaEvent_t start_event;
-    cudaEvent_t stop_event;
-
+    cudaEvent_t start_event{}, stop_event{};
     GpuTimer() {
-        cudaEventCreate(&start_event);
-        cudaEventCreate(&stop_event);
+        CHECK_CUDA(cudaEventCreate(&start_event));
+        auto result = cudaEventCreate(&stop_event);
+        if (result != cudaSuccess) {
+            cudaEventDestroy(start_event);
+            CHECK_CUDA(result);
+        }
     }
-
-    ~GpuTimer() {
-        cudaEventDestroy(start_event);
-        cudaEventDestroy(stop_event);
-    }
-
-    void start(cudaStream_t stream = 0) {
-        cudaEventRecord(start_event, stream);
-    }
-
-    void stop(cudaStream_t stream = 0) {
-        cudaEventRecord(stop_event, stream);
-    }
-
+    GpuTimer(const GpuTimer&) = delete;
+    GpuTimer& operator=(const GpuTimer&) = delete;
+    ~GpuTimer() { cudaEventDestroy(start_event); cudaEventDestroy(stop_event); }
+    void start(cudaStream_t stream = 0) { CHECK_CUDA(cudaEventRecord(start_event, stream)); }
+    void stop(cudaStream_t stream = 0) { CHECK_CUDA(cudaEventRecord(stop_event, stream)); }
     float elapsed() {
-        float ms = 0.0f;
-        cudaEventSynchronize(stop_event);
-        cudaEventElapsedTime(&ms, start_event, stop_event);
+        float ms = 0;
+        CHECK_CUDA(cudaEventSynchronize(stop_event));
+        CHECK_CUDA(cudaEventElapsedTime(&ms, start_event, stop_event));
         return ms;
     }
 };
-
-#endif // __CUDACC__
+#endif

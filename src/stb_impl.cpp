@@ -1,7 +1,7 @@
 // ============================================================================
 // CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
 // STB Image & Image Write Implementation Wrapper
-// Author: Group XX (Lead: Member 3)
+// Author: Group 22 - Nguyen Huu Khanh Hung - 23120271 (Member 3)
 // Reference: stb single-file public domain libraries by Sean Barrett (https://github.com/nothings/stb)
 // ============================================================================
 

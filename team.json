@@ -1,0 +1,54 @@
+{
+  "group": 22,
+  "members": [
+    {
+      "role": 3,
+      "name": "Nguyễn Hữu Khánh Hưng",
+      "student_id": "23120271"
+    },
+    {
+      "role": 2,
+      "name": "Vũ Trần Phúc",
+      "student_id": "23120333"
+    },
+    {
+      "role": 1,
+      "name": "Trần Nguyễn Minh Quân",
+      "student_id": "23120342"
+    }
+  ],
+  "role_order_confirmed": true,
+  "dataset_url": "https://drive.google.com/drive/folders/1tAZe8d2SR47yGxrKt7KvgJqyN25M6P1X?usp=sharing",
+  "sites": [
+    {
+      "id": "site1_indoor",
+      "location": "Phòng tự học KTX ĐHQG TPHCM",
+      "features": "Bàn ghế, cửa sổ, tường và góc phòng",
+      "reason": "Đánh giá ghép ảnh trong nhà, nhiều mặt phẳng và tương phản ánh sáng",
+      "lighting": "Ánh sáng cửa sổ và đèn trong phòng"
+    },
+    {
+      "id": "site2_outdoor",
+      "location": "Tầng 2 tòa nhà E, cơ sở 2 HCMUS",
+      "features": "Góc hành lang, cửa và tường ít chi tiết; ảnh hướng vào trong",
+      "reason": "Đánh giá ghép các mặt phẳng kiến trúc; cần nhóm xác nhận phân loại outdoor",
+      "lighting": "Ánh sáng ban ngày từ cửa và ánh sáng trong hành lang"
+    },
+    {
+      "id": "site3_custom",
+      "location": "Cửa ra vào phòng 1205 KTX ĐHQG TPHCM",
+      "features": "Cửa, biển phòng, ô thông gió và tường phẳng",
+      "reason": "Kiểm tra mô tả đặc trưng trên cửa và các đường thẳng kiến trúc",
+      "lighting": "Ánh sáng hành lang ban ngày"
+    },
+    {
+      "id": "site4_challenging",
+      "location": "Tầng 2 tòa nhà E, cơ sở 2 HCMUS",
+      "features": "Cây xanh, cành lá và sân nhìn từ tầng 2",
+      "reason": "Thách thức do kết cấu lá cây lặp lại và khả năng chuyển động/parallax",
+      "lighting": "Ánh sáng ngoài trời ban ngày, có vùng bóng râm"
+    }
+  ],
+  "member3_confirmed": true,
+  "role_note": "Đã xác nhận: TV1 Trần Nguyễn Minh Quân (back-end), TV2 Vũ Trần Phúc (front-end), TV3 Nguyễn Hữu Khánh Hưng (system/data/profiling/notebook)."
+}

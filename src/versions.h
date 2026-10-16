@@ -1,10 +1,11 @@
+// Original project interfaces/utilities; no external code adaptation.
 #pragma once
 #include "common.h"
 
 // ============================================================================
 // CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
 // Version Interfaces & Stage Function Prototypes
-// Author: Group XX (Lead: Member 3)
+// Author: Group 22 - Nguyen Huu Khanh Hung - 23120271 (Member 3)
 // ============================================================================
 
 // ----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 // ============================================================================
 // CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
 // Module: v0_frontend.cpp (Sequential Stages 1, 2, 3)
-// Author: [Điền tên Thành viên 2] (MSSV: [Điền MSSV])
+// Author: Vu Tran Phuc - 23120333 (Member 2)
 // Lead Role: Front-end & Computer Vision Core Lead
 //
 // References & Citations:

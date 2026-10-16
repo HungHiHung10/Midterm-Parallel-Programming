@@ -1,3 +1,4 @@
+// Original project interfaces/utilities; no external code adaptation.
 #pragma once
 #include <cstdint>
 #include <vector>
@@ -9,7 +10,7 @@
 // ============================================================================
 // CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
 // Common Definitions, Data Structures & Timing Utilities
-// Author: Group XX (Lead: Member 3)
+// Author: Group 22 - Nguyen Huu Khanh Hung - 23120271 (Member 3)
 // ============================================================================
 
 // 1. Basic 2D Point structure

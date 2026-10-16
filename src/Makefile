@@ -1,19 +1,14 @@
-# ============================================================================
-# CSC14120 - Parallel Programming | Final Project: Panorama Image Stitching
-# Makefile for compiling sequential baseline (V0) and CUDA versions
-# ============================================================================
-
+# Author: Nguyen Huu Khanh Hung - 23120271 (Member 3). Portable V0 build; CUDA path remains available.
 NVCC ?= nvcc
-NVCCFLAGS = -O3 -std=c++14 -w
-TARGET = stitch
+CXX = g++
+TARGET ?= stitch
 SRCS = main.cu stb_impl.cpp v0_frontend.cpp v0_backend.cpp v0_stitching.cpp
-
-all: $(TARGET)
-
-$(TARGET): $(SRCS)
-	$(NVCC) $(NVCCFLAGS) $(SRCS) -o $(TARGET) -lm
-
+HEADERS = common.h versions.h logging.h stb_image.h stb_image_write.h
+all: cpu
+cpu: $(SRCS) $(HEADERS)
+	$(CXX) -O3 -std=c++14 -x c++ $(SRCS) -o $(TARGET)
+cuda: $(SRCS) $(HEADERS) cuda_utils.cuh
+	$(NVCC) -O3 -std=c++14 $(SRCS) -o $(TARGET)
 clean:
-	rm -f $(TARGET) *.o *.obj *.exe
-
-.PHONY: all clean
+	rm -f $(TARGET) $(TARGET).exe *.o *.obj
+.PHONY: all cpu cuda clean

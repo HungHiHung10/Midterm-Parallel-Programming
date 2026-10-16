@@ -1,0 +1,7 @@
+﻿Pillow>=11.1
+pillow-heif>=1.0
+numpy>=1.24
+matplotlib>=3.7
+nbformat>=5.9
+nbclient>=0.9
+ipykernel>=6.0

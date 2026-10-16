@@ -1,0 +1,2 @@
+# Author: Nguyen Huu Khanh Hung - 23120271 (Member 3).
+# Dataset prepared by tools/prepare_dataset.py; image owners remain the original photographers.
