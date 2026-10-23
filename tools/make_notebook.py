@@ -12,10 +12,10 @@ md('''# CSC14120 – Panorama Image Stitching
 ## Nhóm 22 · Báo cáo giữa kỳ: V0 và kế hoạch CUDA
 Báo cáo phần hệ thống, dữ liệu và profiling của thành viên 3. Chương trình C++ được biên dịch trực tiếp từ `src/`. Số liệu và hình bên dưới được sinh bởi các cell, không điền thủ công.
 
-**Trạng thái:** đã thực thi trên máy Windows bằng g++; cần chạy lại trên Colab để xác nhận môi trường Colab. Cặp synthetic hiện dùng là fixture tự sinh, chưa phải cặp chính thức của môn học. Link Drive do nhóm cung cấp; chưa xác minh quyền truy cập công khai.
+**Trạng thái:** đã thực thi trên máy Windows bằng g++; cần chạy lại trên Colab để xác nhận môi trường Colab. Cặp synthetic hiện dùng là fixture tự sinh, chưa phải cặp chính thức của môn học. Quyền tải công khai của link Drive đã được kiểm tra ngày 2026-10-21.
 
 ## 0. Setup
-Local: mở notebook trong thư mục dự án. Colab: giải nén `Group22_Midterm.zip` và `Group22_Dataset.zip` cùng vào `/content/Group22_Midterm`, hoặc đặt `src/`, `tools/`, `team.json`, `requirements.txt`, `dataset/` trong thư mục Drive cấu hình bên dưới. Dataset được chia sẻ tại [Google Drive của nhóm](https://drive.google.com/drive/folders/1tAZe8d2SR47yGxrKt7KvgJqyN25M6P1X?usp=sharing).
+Local: mở notebook trong thư mục dự án. Colab: giải nén `Group22_Midterm.zip` và `Group22_Dataset.zip` cùng vào `/content/Group22_Midterm`, hoặc đặt `src/`, `tools/`, `team.json`, `requirements.txt`, `dataset/` trong thư mục Drive cấu hình bên dưới. Dataset được chia sẻ tại [Google Drive của nhóm](https://drive.google.com/drive/folders/1KEfstxQ1an5bEngfaHfXl9wIdbXWo2wF?usp=sharing).
 ''')
 code('''from pathlib import Path
 import os, sys, shutil, subprocess, json
@@ -40,8 +40,14 @@ else:
     ROOT = Path.cwd().resolve()
 assert (ROOT/'src/main.cu').exists(), 'Mở notebook tại thư mục chứa src/'
 os.chdir(ROOT)
-sys.path.insert(0, str(ROOT/'.tools'))
-sys.path.insert(0, str(ROOT/'tools'))
+# Never import binary Python packages from a project-local vendor directory:
+# compiled extensions such as Pillow's _imaging are interpreter-specific.
+local_vendor = str(ROOT/'.tools')
+while local_vendor in sys.path:
+    sys.path.remove(local_vendor)
+tools_path = str(ROOT/'tools')
+if tools_path not in sys.path:
+    sys.path.insert(0, tools_path)
 from build import build
 binary, build_command = build(ROOT)
 print('Binary:', binary)
@@ -69,21 +75,21 @@ md('''| Mốc | Thành viên 1 | Thành viên 2 | Thành viên 3 |
 | Final / tuần 12–13 | Nội dung backend, slide/demo | Nội dung frontend, slide/demo | Tổng hợp báo cáo, đóng gói, video |
 ''')
 md('''## 3.2 Hiểu bài toán
-Hai ảnh A (left) và B (right) được chuyển xám và làm mịn, phát hiện góc FAST rồi mô tả bằng BRIEF. Matching tìm cặp đặc trưng theo khoảng cách Hamming và lọc bằng ratio test. RANSAC loại ngoại lai và ước lượng **H: B → A**. Warping ánh xạ ngược từ canvas về ảnh nguồn để nội suy và hòa trộn.
+Hai ảnh A (left) và B (right) được chuyển xám và làm mịn, phát hiện góc FAST rồi mô tả bằng BRIEF. Matching tìm cặp đặc trưng theo khoảng cách Hamming, ratio test và kiểm tra láng giềng gần nhất hai chiều. RANSAC loại ngoại lai, refit trên toàn bộ inlier và ước lượng **H: B → A**. Warping ánh xạ ngược từ canvas về ảnh nguồn để nội suy và feather blending.
 
-Homography mô hình hóa cảnh gần phẳng hoặc máy ảnh xoay quanh tâm chiếu; vật thể ở nhiều độ sâu và chuyển động có thể gây bóng kép. V0 hiện dùng trọng số 50/50 ở vùng chồng lấp nên còn đường nối. Nội dung stages 1–3 và 4–6 cần TV2/TV1 duyệt theo mã nguồn hiện tại.
+Homography mô hình hóa cảnh gần phẳng hoặc máy ảnh xoay quanh tâm chiếu; vật thể ở nhiều độ sâu và chuyển động có thể gây bóng kép. Stage 6 bù phơi sáng affine khi phép hiệu chỉnh giảm overlap MAE ít nhất 10%. Nếu residual vẫn cao, đường seam tối ưu với dải feather hẹp thay cho feather toàn overlap. Nội dung stages 1–3 và 4–6 cần TV2/TV1 duyệt theo mã nguồn hiện tại.
 
 ## 3.3 Phương pháp và tham số thực sự đang dùng
 | Stage | Cài đặt V0 / tham số | Chất lượng và hướng GPU |
 |---|---|---|
 | 1 | Rec.601; Gaussian tách rời 5×5, sigma 1.2; biên clamp | Giảm nhiễu; phép tính pixel phù hợp grid 2D |
-| 2 | FAST-9, threshold 20; kiểm tra sớm 4 điểm; NMS 3×3 nghiêm ngặt; top 1500 | Giới hạn chi phí matching; top-K không bảo đảm phân bố đều; scan/NMS cần bước riêng trên GPU |
-| 3 | BRIEF 256 bit/32 byte; patch 31×31; Gaussian sigma 6; seed 14120 | Nhỏ gọn; chưa bất biến góc xoay/tỷ lệ; biên ảnh hiện nhận descriptor zero |
-| 4 | BF Hamming, ratio <0.75 | Loại bớt so khớp mơ hồ; không bảo đảm loại hết ngoại lai; dự kiến `__popc` |
-| 5 | RANSAC 1500 lần, seed 42, ngưỡng 3 px; giải hệ 8×8 bằng khử Gauss | Chọn mô hình nhiều inlier nhất; **chưa refit toàn bộ inlier**; có thể song song giả thuyết |
-| 6 | Inverse warp, bilinear, canvas bounding box, average 0.5/0.5 | Không phải feathering; mỗi pixel canvas có thể tính độc lập |
+| 2 | FAST-9, threshold 20; kiểm tra sớm an toàn 2/4 điểm; NMS 3×3; top 1500; biên 16 px | Giới hạn chi phí matching; top-K không bảo đảm phân bố đều; scan/NMS cần bước riêng trên GPU |
+| 3 | BRIEF 256 bit/32 byte; patch 31×31; Gaussian sigma 6; seed 14120 | Nhỏ gọn; mọi keypoint có descriptor hợp lệ; chưa bất biến góc xoay/tỷ lệ |
+| 4 | BF Hamming, ratio <0.75, mutual nearest A↔B | Loại match mơ hồ/lặp; hai lượt quét làm V0 chậm hơn; dự kiến tiling + `__popc` |
+| 5 | RANSAC 1500 lần, seed 42, symmetric error <3 px; normalized 8-parameter DLT; refit 2 lượt; tối thiểu 8 inlier và 20% | Giảm homography yếu và ổn định theo độ phân giải; có thể song song giả thuyết |
+| 6 | Inverse warp, bilinear; bù sáng affine có kiểm chứng; adaptive minimum-error seam hoặc distance feather | Giảm vệt sáng và ghosting; estimation/seam thêm reduction/DP ngoài kernel pixel |
 
-Các điểm cần TV1/TV2 cải thiện: refit H trên inliers, feathering thực sự, xử lý descriptor ở biên và kiểm tra FAST-9. Không gán các đặc tính chưa cài đặt cho V0.
+Giới hạn còn lại của V0: BRIEF chưa có pyramid/orientation, Top-K chưa chia lưới và global homography vẫn gây projective skew. Bù sáng/seam giảm artefact nhưng không phục hồi hình học bị sai do parallax. Đây là các hướng chất lượng cho phiên bản sau, không gán đặc tính chưa cài cho V0 hiện tại.
 
 ## 3.4 Kiến trúc tuần tự V0
 `common.h` chứa `ImageRGB`, `ImageGray`, `Keypoint`, `Descriptor256`, `Match`, `Homography3x3` và `StageTimings`. Ảnh RGB xen kẽ nằm trong vector sở hữu dữ liệu; descriptor gồm 32 byte, match lưu chỉ số để nối keypoint với descriptor; H là 9 số double row-major.
@@ -123,9 +129,9 @@ Chuẩn hóa H theo phần tử [2,2], tính Frobenius và sai số chiếu trê
 ''')
 code('from report import show_correctness\nshow_correctness(summary)')
 md('''### 3.5.2 Panorama cho từng địa điểm
-Ảnh đầu ra ở độ phân giải medium. Có vùng đen ngoài footprint ảnh sau warp. Còn đường nối, bóng kép và chênh lệch độ sáng: ảnh trong nhà dễ thấy trên cửa sổ/trần; cảnh cây xanh có cấu trúc lặp. Các ảnh này là đầu ra V0 thực tế, không xử lý hậu kỳ để che lỗi.
+Ảnh đầu ra ở độ phân giải medium. Notebook hiển thị thêm bản crop hình chữ nhật lớn nhất không chứa nền canvas đen; bản `panorama_<site>.png` vẫn giữ toàn bộ footprint để kiểm tra. Crop chỉ là hậu xử lý trình bày, nằm ngoài timing sáu stage và không sửa méo phối cảnh, đường nối hay bóng kép. Cảnh cây xanh có cấu trúc lặp; ảnh indoor có vùng ít texture và chênh sáng mạnh ở cửa sổ.
 ''')
-code('from report import show_panoramas\nshow_panoramas(ROOT)')
+code('from report import show_panoramas\nshow_panoramas(ROOT, summary)')
 md('''### 3.5.3 Bảng thời gian và scaling
 Bảng đầu thể hiện Mean/Min riêng từng site và độ phân giải. Bảng tổng hợp lấy trung bình đều bốn site; cột `mean(site min)` là trung bình các min theo site, không phải min toàn bộ thí nghiệm. CSV giữ đủ từng lần đo. Biểu đồ dùng thời gian trung bình bốn site; kích thước ảnh đầu ra có thể khác nhau theo H.
 ''')
@@ -135,9 +141,9 @@ Chọn cả sáu stage cho V1 theo kế hoạch nhóm. Với từng độ phân 
 ''')
 code('from report import show_analysis\nshow_analysis(summary)')
 md('''## 3.6 Dataset
-Link do nhóm cung cấp: [Google Drive dataset nhóm 22](https://drive.google.com/drive/folders/1tAZe8d2SR47yGxrKt7KvgJqyN25M6P1X?usp=sharing). Nhóm cần tải bộ prepared/synthetic đã tạo lên thư mục này và kiểm tra chế độ Anyone with the link.
+Link đã kiểm tra tải công khai: [Google Drive dataset nhóm 22](https://drive.google.com/drive/folders/1KEfstxQ1an5bEngfaHfXl9wIdbXWo2wF?usp=sharing). Bộ Drive hiện chứa tám ảnh raw; gói bàn giao `Group22_Dataset.zip` bổ sung prepared và synthetic để tái lập đầy đủ.
 
-Ảnh gốc là HEIC có tên không chuẩn phần mở rộng. Script nhận diện nội dung, áp dụng EXIF orientation, chuyển RGB, center-crop 16:9 rồi resize Lanczos thành ba cỡ. Ảnh gốc giữ nguyên. `manifest.json` ghi SHA256 nguồn, kích thước gốc, crop box và có/không upscale. Chú ý `site2_outdoor` là tên thư mục nhóm đã dùng, ảnh hướng vào hành lang: cần xác nhận với nhóm/giảng viên về điều kiện outdoor. `site4_challenging` là cảnh cây xanh ngoài trời; thách thức theo nội dung là texture lặp/parallax, không phải thiếu sáng.
+Tám ảnh gốc JPG/HEIC được đặt phẳng theo mẫu `dataset/raw/<category>_<left|right>.<ext>` với bốn category `indoor`, `outdoor`, `custom`, `challenging`, nên phía ảnh không phụ thuộc thứ tự duyệt thư mục. Script ánh xạ các tên ngắn này sang ID dùng trong benchmark, áp dụng EXIF orientation, chuyển RGB, center-crop 16:9 rồi resize Lanczos thành ba cỡ. Ảnh gốc giữ nguyên. `manifest.json` ghi SHA256 nguồn, kích thước gốc, crop box và có/không upscale. Chú ý `site2_outdoor` là tên nhóm đã đăng ký, ảnh hướng vào hành lang: cần xác nhận với nhóm/giảng viên về điều kiện outdoor. `site4_challenging` là cảnh cây xanh ngoài trời; thách thức theo nội dung là texture lặp/parallax, không phải thiếu sáng.
 ''')
 code('''table(['Site', 'Địa điểm', 'Đặc điểm', 'Lý do chọn', 'Ánh sáng'], [
     [s['id'],s['location'],s['features'],s['reason'],s['lighting']] for s in team['sites']])
@@ -152,9 +158,9 @@ md('''## 3.7 Kế hoạch GPU
 | Gray/blur | Grid 2D, mỗi thread 1 pixel; hai pass blur | Shared memory + halo; kiểm soát boundary và đồng bộ |
 | FAST/NMS | Mỗi thread 1 pixel, pass NMS riêng; compact rồi top-K | Scan/compaction; divergence và thứ tự đầu ra ảnh hưởng tái lập |
 | BRIEF | Mỗi thread 1 keypoint ở V1 | Thử warp/keypoint; đọc patch phân tán, xử lý biên |
-| BF Hamming | Mỗi thread 1 query, quét train và lấy best/second | Tiling train + `__popc`; chi phí reduction và occupancy |
+| BF Hamming | Mỗi thread 1 query cho cả A→B và B→A, lấy best/second rồi mutual filter | Tiling train + `__popc`; chi phí reduction và occupancy |
 | RANSAC | Mỗi block 1 hypothesis, thread đánh giá inlier | Reduction, tránh giả thuyết suy biến, RNG xác định; kiểm tra sai số float |
-| Warp/blend | Mỗi thread 1 pixel canvas | Texture sampling, feathering; canvas lớn và truy cập nguồn phân tán |
+| Warp/blend | Mỗi thread 1 pixel canvas; reduction ước lượng exposure; seam DP theo hàng | Texture sampling, scan/DP, canvas lớn và truy cập nguồn phân tán |
 
 Ba hướng tối ưu chính: shared-memory tiling cho blur/matching; scan/compaction cho keypoints; texture sampling và hai stream frontend. Chỉ chọn sau khi đối chiếu kết quả GPU với V0, đo kernel cùng H2D/D2H bằng CUDA Events và dùng Nsight xác định giới hạn thực tế. Các stage đứng đầu bảng profiling ở 3.5 được ưu tiên trước.
 
@@ -164,7 +170,7 @@ Ba hướng tối ưu chính: shared-memory tiling cho blur/matching; scan/compa
 - Vai trò đã xác nhận: TV1 Trần Nguyễn Minh Quân, TV2 Vũ Trần Phúc, TV3 Nguyễn Hữu Khánh Hưng.
 - Thay fixture bằng cặp synthetic chính thức khi nhận được, cập nhật provenance/chiều H rồi chạy lại.
 - Kiểm tra tiêu chí registered sites/outdoor và quyền truy cập Drive; upload raw + prepared + synthetic.
-- TV1/TV2 duyệt mô tả thuật toán và các giới hạn V0. Chưa có refit/feathering thực sự trong backend hiện tại.
+- TV1/TV2 duyệt mô tả thuật toán, ngưỡng đồng thuận RANSAC và các giới hạn V0.
 ''')
 nb = nbf.v4.new_notebook(cells=cells)
 nb.metadata = dict(kernelspec=dict(display_name='Python 3', language='python', name='python3'),

@@ -4,15 +4,19 @@ from console import log
 import argparse
 import hashlib
 import json
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / '.tools'))  # Optional project-local HEIC dependency.
 import numpy as np
 from PIL import Image, ImageOps, ImageDraw
 
 SITES = ['site1_indoor', 'site2_outdoor', 'site3_custom', 'site4_challenging']
+RAW_STEMS = {
+    'site1_indoor': 'indoor',
+    'site2_outdoor': 'outdoor',
+    'site3_custom': 'custom',
+    'site4_challenging': 'challenging',
+}
 SIZES = {'small': (1280, 720), 'medium': (1920, 1080), 'large': (3840, 2160)}
 
 def prepare(root=ROOT):
@@ -20,11 +24,17 @@ def prepare(root=ROOT):
     register_heif_opener()
     records = []
     for site in SITES:
-        files = sorted(p for p in (root / 'dataset/raw' / site).iterdir()
-                       if p.is_file() and not p.name.startswith('.'))
-        if len(files) != 2:
-            raise ValueError(f'{site}: expected exactly 2 raw images, found {len(files)}')
-        for side, source in zip(['left', 'right'], files):
+        raw_dir = root / 'dataset/raw'
+        stem = RAW_STEMS[site]
+        sources = {}
+        for side in ['left', 'right']:
+            files = sorted(raw_dir.glob(f'{stem}_{side}.*'))
+            if len(files) != 1:
+                raise ValueError(
+                    f'{site}/{side}: expected exactly one raw file named '
+                    f'{stem}_{side}.<extension>, found {len(files)}')
+            sources[side] = files[0]
+        for side, source in sources.items():
             with Image.open(source) as original:
                 image = ImageOps.exif_transpose(original).convert('RGB')
             w, h = image.size

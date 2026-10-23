@@ -10,7 +10,7 @@
 | Struct/giao diện chung và stb | assignment, TV3 | Tận dụng và hoàn thiện common/versions/stb_impl; giữ license stb |
 | CHECK_CUDA và GpuTimer | assignment, TV3 | CUDA utility kiểm tra lỗi từng event; không copy timer; chưa kiểm thử GPU |
 | Stage timing, loại trừ I/O | PDF 3.5, assignment | Timer quanh từng stage; CSV thô, mean/min; total đo độc lập |
-| 24 ảnh ba độ phân giải | assignment, TV3 | Tạo từ 8 raw HEIC, EXIF orientation + crop16:9 + Lanczos; manifest nguồn |
+| 24 ảnh ba độ phân giải | assignment, TV3 | Tạo từ 8 raw JPG/HEIC, EXIF orientation + crop16:9 + Lanczos; manifest nguồn |
 | Correctness so với ground truth | PDF 3.5 | Fixture tự sinh và H B→A; Frobenius + grid projection; còn thiếu course fixture |
 | Panorama mỗi site | PDF 3.5 | 4 panorama medium, notebook hiển thị; ghi rõ seam/ghosting |
 | Timing ở cả 3 độ phân giải | PDF 3.5 | 4 sites × 3 sizes, 5 measured runs + 1 warmup mỗi cặp |
@@ -20,4 +20,4 @@
 | Một nguồn code và notebook có output | PDF 4 | Build từ src; notebook thực thi qua nbclient và lưu output; chưa kiểm thử Colab thật |
 | Nén gói báo cáo/src | PDF 2 | `tools/package.py`; hai ZIP mã nguồn/báo cáo và dataset |
 
-Không tuyên bố hoàn tất các thao tác ngoài máy như đăng ký site, nộp bài, upload Drive hoặc xác nhận public sharing. Không sửa backend để mạo nhận đã có refit/feathering; notebook mô tả đúng mã hiện có.
+Không tuyên bố hoàn tất các thao tác ngoài máy như đăng ký site hay nộp bài. Notebook mô tả đúng mã hiện có, gồm refit homography, feathering, bù phơi sáng có điều kiện và adaptive seam.

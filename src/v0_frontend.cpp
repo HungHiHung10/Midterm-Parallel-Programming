@@ -91,7 +91,10 @@ std::vector<Keypoint> v0_detect_keypoints(const ImageGray& gray, int max_keypoin
     std::vector<Keypoint> keypoints;
     const int w = gray.width;
     const int h = gray.height;
-    if (w < 7 || h < 7) return keypoints;
+    // BRIEF uses a 31x31 patch. Detect only points that can later receive a
+    // valid descriptor so keypoint and descriptor indices stay aligned.
+    const int descriptor_border = 16;
+    if (w <= 2 * descriptor_border || h <= 2 * descriptor_border) return keypoints;
 
     // FAST-9 Circle Offsets (16 perimeter pixels relative to center)
     const int circle_offsets[16][2] = {
@@ -103,8 +106,8 @@ std::vector<Keypoint> v0_detect_keypoints(const ImageGray& gray, int max_keypoin
     std::vector<float> corner_scores(w * h, 0.0f);
 
     // Step 2.1: FAST corner test for each interior pixel
-    for (int r = 3; r < h - 3; ++r) {
-        for (int c = 3; c < w - 3; ++c) {
+    for (int r = descriptor_border; r < h - descriptor_border; ++r) {
+        for (int c = descriptor_border; c < w - descriptor_border; ++c) {
             uint8_t p = gray.data[r * w + c];
             int lower = std::max(0, p - threshold);
             int upper = std::min(255, p + threshold);
@@ -117,7 +120,10 @@ std::vector<Keypoint> v0_detect_keypoints(const ImageGray& gray, int max_keypoin
 
             int count_b = (p0 > upper) + (p4 > upper) + (p8 > upper) + (p12 > upper);
             int count_d = (p0 < lower) + (p4 < lower) + (p8 < lower) + (p12 < lower);
-            if (count_b < 3 && count_d < 3) continue;
+            // A valid arc of 9 pixels can contain only two of the four compass
+            // samples. Requiring three (the common FAST-12 shortcut) rejects
+            // valid FAST-9 corners.
+            if (count_b < 2 && count_d < 2) continue;
 
             // Full 16-point circle evaluation
             int circle_vals[16];
@@ -150,8 +156,8 @@ std::vector<Keypoint> v0_detect_keypoints(const ImageGray& gray, int max_keypoin
     }
 
     // Step 2.2: Non-Maximum Suppression (NMS) in 3x3 window
-    for (int r = 4; r < h - 4; ++r) {
-        for (int c = 4; c < w - 4; ++c) {
+    for (int r = descriptor_border; r < h - descriptor_border; ++r) {
+        for (int c = descriptor_border; c < w - descriptor_border; ++c) {
             float center_score = corner_scores[r * w + c];
             if (center_score <= 0.0f) continue;
 
@@ -219,7 +225,8 @@ std::vector<Descriptor256> v0_compute_descriptors(const ImageGray& gray,
         Descriptor256& desc = descriptors[i];
         std::memset(desc.data, 0, 32);
 
-        // Discard or pad border keypoints
+        // Detection already enforces this border. Keep the guard for callers
+        // that construct keypoints themselves.
         if (cx < 16 || cx >= w - 16 || cy < 16 || cy >= h - 16) {
             continue;
         }

@@ -108,11 +108,11 @@ GroupXX_Midterm.zip (Gói nộp bài nén duy nhất theo quy định)
     │   ├── synthetic_right.png               # [TV3] Ảnh nhân tạo B
     │   └── H_ground_truth.txt                # [TV3] Ma trận $3\times3$ chuẩn để tính sai số Homography Error
     │
-    ├── raw/                                  # [TV3] Toàn bộ ảnh gốc chụp từ máy ảnh/điện thoại (chưa qua xử lý)
-    │   ├── site1_indoor/                     # [TV3] Cặp ảnh gốc địa điểm trong nhà
-    │   ├── site2_outdoor/                    # [TV3] Cặp ảnh gốc địa điểm ngoài trời
-    │   ├── site3_custom/                     # [TV3] Cặp ảnh gốc địa điểm tự chọn
-    │   └── site4_challenging/                # [TV3] Cặp ảnh gốc thử thách (thiếu sáng / lặp vân / ít chi tiết)
+    ├── raw/                                  # [TV3] 8 ảnh gốc, đặt phẳng và định danh tường minh
+    │   ├── indoor_left.* / indoor_right.*
+    │   ├── outdoor_left.* / outdoor_right.*
+    │   ├── custom_left.* / custom_right.*
+    │   └── challenging_left.* / challenging_right.*
     │
     ├── prepared/                             # [TV3] Đúng 24 ảnh chuẩn tỷ lệ 16:9 ở 3 độ phân giải
     │   ├── small/ (1280 x 720)               # [TV3] 4 cặp (8 ảnh) dùng đo thời gian kích thước nhỏ

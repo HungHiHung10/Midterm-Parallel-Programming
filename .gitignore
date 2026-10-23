@@ -22,8 +22,8 @@ bin/
 
 # Dataset binaries are distributed through the public Drive link, not Git.
 # Keep the directory skeleton, documentation, and reproducibility manifest.
-dataset/raw/*/*
-!dataset/raw/*/.gitkeep
+dataset/raw/**
+!dataset/raw/.gitkeep
 dataset/prepared/**/*.png
 dataset/prepared/**/*.jpg
 dataset/prepared/**/*.jpeg
@@ -32,6 +32,7 @@ dataset/synthetic/*.jpg
 dataset/synthetic/*.jpeg
 dataset/synthetic/H_ground_truth.txt
 dataset/synthetic/provenance.json
+dataset/backup/
 
 # Generated benchmark artifacts. The executed notebook already embeds the
 # required tables, charts, and panorama previews.

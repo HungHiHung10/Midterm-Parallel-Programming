@@ -41,7 +41,7 @@ bool v0_estimate_homography_ransac(const std::vector<Keypoint>& kptsA,
                                    int max_iters = 1500,
                                    float inlier_thresh = 3.0f);
 
-// Stage 6: Warping (Inverse Warping with Bilinear Interpolation) & Linear Feathering Blending
+// Stage 6: Inverse warp, bilinear interpolation, exposure compensation, adaptive seam/feather
 ImageRGB v0_warp_and_blend(const ImageRGB& imgA,
                            const ImageRGB& imgB,
                            const Homography3x3& H);

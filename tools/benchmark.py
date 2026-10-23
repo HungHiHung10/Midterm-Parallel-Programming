@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -16,6 +17,42 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 SITES = ['site1_indoor', 'site2_outdoor', 'site3_custom', 'site4_challenging']
 STAGES = ['preprocess_ms', 'keypoint_ms', 'descriptor_ms', 'matching_ms', 'ransac_ms', 'warp_blend_ms']
+
+def save_largest_valid_crop(source, destination):
+    """Save the largest all-image rectangle; the warp canvas background is exact black."""
+    with Image.open(source) as image:
+        rgb = np.asarray(image.convert('RGB'))
+    non_black = np.any(rgb != 0, axis=2)
+    # The union of two projected image quadrilaterals is contiguous on each
+    # scanline for this left/right panorama. Fill between its first and last
+    # non-black pixels so naturally black objects are not mistaken for canvas.
+    valid = np.zeros_like(non_black)
+    for y, row in enumerate(non_black):
+        columns = np.flatnonzero(row)
+        if columns.size:
+            valid[y, columns[0]:columns[-1] + 1] = True
+    heights = np.zeros(valid.shape[1], dtype=np.int32)
+    best_area, best_box = 0, None
+    for y, row in enumerate(valid):
+        heights = np.where(row, heights + 1, 0)
+        stack = []
+        for x in range(len(heights) + 1):
+            height = int(heights[x]) if x < len(heights) else 0
+            start = x
+            while stack and stack[-1][1] > height:
+                left, previous_height = stack.pop()
+                area = previous_height * (x - left)
+                if area > best_area:
+                    best_area = area
+                    best_box = (left, y - previous_height + 1, x, y + 1)
+                start = left
+            if height and (not stack or stack[-1][1] < height):
+                stack.append((start, height))
+    if best_box is None:
+        raise ValueError(f'Panorama has no valid pixels: {source}')
+    cropped = Image.fromarray(rgb[best_box[1]:best_box[3], best_box[0]:best_box[2]])
+    cropped.save(destination)
+    return list(best_box), best_area / valid.size
 
 def run(binary, left, right, output, runs, warmup, prefix):
     command = [str(binary), str(left), str(right), str(output), '--version', '0',
@@ -36,7 +73,10 @@ def run(binary, left, right, output, runs, warmup, prefix):
     for row in samples:
         if not all(np.isfinite(row[k]) and row[k] >= 0 for k in STAGES + ['total_pipeline_ms']):
             raise ValueError('Invalid timing sample')
-    return dict(success=True, runs=runs, warmup=warmup, command=command,
+    blend_rows = re.findall(r'Blend: exposure=(\w+), overlap MAE=([\d.]+), seam=(\w+)', result.stdout)
+    blend = (dict(exposure=blend_rows[-1][0], overlap_mae=float(blend_rows[-1][1]),
+                  seam=blend_rows[-1][2]) if blend_rows else None)
+    return dict(success=True, runs=runs, warmup=warmup, command=command, blend=blend,
         mean={k: float(np.mean([r[k] for r in samples])) for k in STAGES + ['total_pipeline_ms']},
         min={k: float(min(r[k] for r in samples)) for k in STAGES + ['total_pipeline_ms']})
 
@@ -84,6 +124,11 @@ def benchmark(root=ROOT, runs=5, warmup=1):
             output = out / (f'panorama_{site}.png' if resolution == 'medium' else f'bench_{resolution}_{site}.png')
             result = run(binary, data/f'{site}_left.png', data/f'{site}_right.png',
                          output, runs, warmup, prefix)
+            if result['success'] and resolution == 'medium':
+                cropped = out / f'panorama_{site}_cropped.png'
+                crop_box, retained = save_largest_valid_crop(output, cropped)
+                result.update(cropped_output=str(cropped.relative_to(root)).replace('\\', '/'),
+                              crop_box=crop_box, retained_canvas_fraction=retained)
             result.update(site=site, resolution=resolution)
             summary['results'].append(result)
             (out/'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')

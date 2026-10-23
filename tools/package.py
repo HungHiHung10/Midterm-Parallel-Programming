@@ -3,6 +3,7 @@
 import csv
 import hashlib
 import json
+import math
 import zipfile
 from pathlib import Path
 import nbformat
@@ -25,6 +26,9 @@ def package(root=ROOT):
     for name, digest in summary['source_sha256'].items():
         assert hashlib.sha256((root/'src'/name).read_bytes()).hexdigest() == digest, f'Stale results: {name}'
     for result in summary['results']:
+        assert result['blend']['exposure'] in ['affine', 'unchanged']
+        assert result['blend']['seam'] in ['optimal', 'feather']
+        assert math.isfinite(result['blend']['overlap_mae']) and result['blend']['overlap_mae'] >= 0
         prefix = root/'outputs_v0'/f"{result['resolution']}_{result['site']}"
         samples = list(csv.DictReader(prefix.with_suffix('.csv').open()))
         assert len(samples) == summary['runs']
@@ -40,6 +44,7 @@ def package(root=ROOT):
             assert image.size == expected_sizes[path.parent.name]
     for site in ['site1_indoor','site2_outdoor','site3_custom','site4_challenging']:
         assert (root/'outputs_v0'/f'panorama_{site}.png').is_file()
+        assert (root/'outputs_v0'/f'panorama_{site}_cropped.png').is_file()
     dist = root/'dist'
     dist.mkdir(exist_ok=True)
     source_files = [notebook] + [root/name for name in
@@ -50,8 +55,14 @@ def package(root=ROOT):
                      if p.is_file() and (p.suffix in ['.json','.csv','.log','.txt'] or
                      p.name in ['panorama_site1_indoor.png','panorama_site2_outdoor.png',
                                 'panorama_site3_custom.png','panorama_site4_challenging.png',
+                                'panorama_site1_indoor_cropped.png','panorama_site2_outdoor_cropped.png',
+                                'panorama_site3_custom_cropped.png','panorama_site4_challenging_cropped.png',
                                 'synthetic_panorama.png','scaling.png','panoramas.png'])]
-    dataset_files = [p for p in (root/'dataset').rglob('*') if p.is_file() and p.name != '.gitkeep']
+    dataset_files = [
+        p for folder in ['raw', 'prepared', 'synthetic']
+        for p in (root/'dataset'/folder).rglob('*')
+        if p.is_file() and p.name != '.gitkeep'
+    ]
     for name, paths in [('Group22_Midterm.zip', source_files), ('Group22_Dataset.zip', dataset_files)]:
         target = dist/name
         with zipfile.ZipFile(target, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=4) as archive:

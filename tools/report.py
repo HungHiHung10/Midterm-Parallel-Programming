@@ -27,10 +27,10 @@ def show_correctness(summary):
         ['Pass threshold (mean px)', c['threshold_px']], ['Passed', c['passed']]])
     assert c['passed'], 'Synthetic error exceeds the declared threshold'
 
-def show_panoramas(root):
+def show_panoramas(root, summary):
     fig, axes = plt.subplots(2, 2, figsize=(16, 9))
     for ax, site in zip(axes.flat, SITES):
-        path = root/'outputs_v0'/f'panorama_{site}.png'
+        path = root/'outputs_v0'/f'panorama_{site}_cropped.png'
         with Image.open(path) as image:
             preview = image.copy()
             preview.thumbnail((1400, 800))
@@ -40,6 +40,15 @@ def show_panoramas(root):
     fig.tight_layout()
     fig.savefig(root/'outputs_v0/panoramas.png', dpi=120)
     plt.show()
+    medium = [r for r in summary['results'] if r['resolution'] == 'medium']
+    table(['Site', 'Exposure', 'Overlap MAE', 'Blend', 'Canvas retained'], [[
+        r['site'], r['blend']['exposure'], f"{r['blend']['overlap_mae']:.3f}",
+        r['blend']['seam'], f"{r['retained_canvas_fraction']:.1%}"
+    ] for r in medium])
+    display(Markdown('Overlap MAE dùng để chọn chiến lược trong từng cặp, không phải thước đo '
+                     'so sánh chất lượng giữa các cảnh có nội dung khác nhau.'))
+    display(Markdown('Bản trên được crop theo hình chữ nhật lớn nhất không chứa nền canvas đen. '
+                     'Các file `panorama_<site>.png` vẫn giữ toàn bộ footprint để kiểm tra thuật toán.'))
 
 def show_timings(summary, root):
     # Full per-site mean/min table, not a manually maintained Markdown copy.
@@ -91,9 +100,6 @@ def show_analysis(summary):
         'Chi phí truyền H2D/D2H, launch và đồng bộ phải được đo ở V1.'))
 
 def show_dataset(root):
-    from pillow_heif import register_heif_opener
-    from PIL import ImageOps
-    register_heif_opener()
     manifest = json.loads((root/'dataset/prepared/manifest.json').read_text(encoding='utf-8'))
     rows = []
     for resolution in ['small', 'medium', 'large']:
@@ -107,14 +113,18 @@ def show_dataset(root):
     fig, axes = plt.subplots(4, 2, figsize=(12, 13))
     for i, site in enumerate(SITES):
         for j, side in enumerate(['left', 'right']):
-            record = next(r for r in manifest if r['site'] == site and r['side'] == side)
-            path = root/record['source']
+            # Display the normalized PNG used by V0. This keeps report-only
+            # runs independent of an HEIC decoder; pillow-heif is needed only
+            # when prepare_dataset must regenerate these files from raw data.
+            record = next(r for r in manifest if r['resolution'] == 'medium'
+                          and r['site'] == site and r['side'] == side)
+            path = root/record['output']
             with Image.open(path) as image:
-                preview = ImageOps.exif_transpose(image).convert('RGB')
-                original_size = preview.size
+                preview = image.convert('RGB')
+                prepared_size = preview.size
                 preview.thumbnail((1000, 650))
                 axes[i, j].imshow(preview)
-            axes[i, j].set_title(f'{site} / {side} / raw {original_size}')
+            axes[i, j].set_title(f'{site} / {side} / medium {prepared_size}')
             axes[i, j].axis('off')
     fig.tight_layout()
     plt.show()

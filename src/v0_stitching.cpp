@@ -52,6 +52,8 @@ bool run_v0(const ImageRGB& imgA,
     std::vector<Keypoint> kptsA = v0_detect_keypoints(blurA, 1500);
     std::vector<Keypoint> kptsB = v0_detect_keypoints(blurB, 1500);
     timings.stage2_keypoint_ms = stage_timer.stop();
+    log_message(LogLevel::Process) << "Keypoints: A=" << kptsA.size()
+                                   << ", B=" << kptsB.size() << "\n";
 
     // ------------------------------------------------------------------------
     // Stage 3: Feature Description (BRIEF 256-bit Binary Descriptor)
@@ -67,6 +69,7 @@ bool run_v0(const ImageRGB& imgA,
     stage_timer.start();
     std::vector<Match> matches = v0_match_descriptors(descA, descB, 0.75f);
     timings.stage4_matching_ms = stage_timer.stop();
+    log_message(LogLevel::Process) << "Mutual ratio matches: " << matches.size() << "\n";
 
     if (matches.size() < 4) {
         log_message(LogLevel::Error) << "Insufficient feature matches: " << matches.size() << " (need >= 4)\n";
@@ -82,10 +85,16 @@ bool run_v0(const ImageRGB& imgA,
     bool ransac_ok = v0_estimate_homography_ransac(kptsA, kptsB, matches, H_BtoA, inliers, 1500, 3.0f);
     timings.stage5_ransac_ms = stage_timer.stop();
 
-    if (!ransac_ok || inliers.size() < 4) {
-        log_message(LogLevel::Error) << "RANSAC failed to estimate valid homography\n";
+    const size_t minimum_inliers = 8;
+    const bool weak_consensus = matches.empty() || inliers.size() * 5 < matches.size();
+    if (!ransac_ok || inliers.size() < minimum_inliers || weak_consensus) {
+        log_message(LogLevel::Error) << "RANSAC consensus too weak: " << inliers.size()
+                                     << "/" << matches.size() << " inliers (need >= "
+                                     << minimum_inliers << " and >= 20%)\n";
         return false;
     }
+    log_message(LogLevel::Success) << "RANSAC inliers: " << inliers.size()
+                                   << "/" << matches.size() << "\n";
 
     // Validate the projected rectangle before backend canvas allocation.
     const double* matrix = H_BtoA.h;
@@ -120,7 +129,7 @@ bool run_v0(const ImageRGB& imgA,
     }
 
     // ------------------------------------------------------------------------
-    // Stage 6: Warping & Blending (Inverse Warping + Bilinear + Feathering)
+    // Stage 6: Inverse warp + bilinear + exposure compensation + adaptive seam/feather
     // ------------------------------------------------------------------------
     stage_timer.start();
     panorama = v0_warp_and_blend(imgA, imgB, H_BtoA);

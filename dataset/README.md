@@ -24,5 +24,7 @@ Tài liệu hướng dẫn chuẩn bị bộ dữ liệu thực nghiệm theo qu
   - `H_ground_truth.txt` (ma trận homography $3 \times 3$ chuẩn)
 
 ## 3. Lưu trữ & Chia sẻ Google Drive:
+- `raw/` dùng cấu trúc phẳng: `indoor_left/right`, `outdoor_left/right`, `custom_left/right`, `challenging_left/right`; phần mở rộng có thể là JPG, PNG hoặc HEIC.
+- `backup/` chỉ lưu bản cũ local để khôi phục, bị loại khỏi Git và `Group22_Dataset.zip`.
 - Toàn bộ ảnh gốc chất lượng cao (`raw/`) và 24 ảnh chuẩn hóa (`prepared/`) được nén và tải lên Google Drive của nhóm với quyền truy cập "Anyone with the link can view".
 - Đường dẫn Google Drive này bắt buộc phải được chèn vào Notebook ở mục 2 và mục 3.6.

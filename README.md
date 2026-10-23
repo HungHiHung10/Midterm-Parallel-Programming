@@ -13,7 +13,7 @@ python tools/execute_notebook.py
 python tools/package.py
 ```
 
-Nếu đã có đủ prepared/synthetic thì không cần chuẩn bị lại. Bộ đọc HEIC cục bộ tại `.tools/` không đưa vào ZIP; cài bằng requirements khi chuyển máy. `prepare_dataset.py` giữ nguyên ảnh raw và không ghi đè synthetic đã có. Nếu chỉ có một phần synthetic, script dừng để tránh phá dữ liệu.
+Nếu đã có đủ prepared/synthetic thì không cần chuẩn bị lại. Để đọc HEIC, cài `pillow-heif` bằng `requirements.txt`; không thêm thư mục chứa bản sao Pillow vào `sys.path` vì extension nhị phân phụ thuộc môi trường Python. `prepare_dataset.py` giữ nguyên ảnh raw và không ghi đè synthetic đã có. Nếu chỉ có một phần synthetic, script dừng để tránh phá dữ liệu.
 
 CLI trên Windows:
 
@@ -33,9 +33,10 @@ g++ -O3 -std=c++14 -x c++ src/main.cu src/stb_impl.cpp src/v0_frontend.cpp src/v
 
 ## Dữ liệu và kết quả
 
-- 24 ảnh PNG: `dataset/prepared/{small,medium,large}/`; manifest ghi nguồn HEIC, SHA256, crop box và kiểm tra upscale.
+- 8 ảnh raw đặt phẳng theo mẫu `dataset/raw/<category>_<left|right>.<ext>`; category là `indoor`, `outdoor`, `custom` hoặc `challenging`.
+- 24 ảnh PNG: `dataset/prepared/{small,medium,large}/`; manifest ghi nguồn, SHA256, crop box và kiểm tra upscale.
 - `dataset/synthetic/`: fixture tự sinh với H dịch chuyển 320 px, seed cố định; provenance ghi rõ không phải tài nguyên môn học.
-- `outputs_v0/`: bốn panorama medium, CSV từng lần chạy, bảng tổng hợp, H, log, JSON ghi phần cứng/compiler/hash nguồn và biểu đồ.
+- `outputs_v0/`: bốn panorama medium giữ toàn bộ canvas và bốn bản `*_cropped.png` để trình bày, CSV từng lần chạy, bảng tổng hợp, H, log, JSON ghi phần cứng/compiler/hash nguồn và biểu đồ. Crop nằm ngoài timing sáu stage và không thay đổi homography.
 - `team.json`: thông tin nhóm, vai trò, địa điểm và URL dataset. TV1: Trần Nguyễn Minh Quân; TV2: Vũ Trần Phúc; TV3: Nguyễn Hữu Khánh Hưng.
 - `dist/Group22_Midterm.zip`: notebook có output, src, tools và tài liệu hỗ trợ. `dist/Group22_Dataset.zip`: raw + prepared + synthetic. Dataset nằm ngoài ZIP mã nguồn theo yêu cầu link dataset trong đề.
 
@@ -48,6 +49,6 @@ Giải nén hai ZIP vào cùng `/content/Group22_Midterm`, mở notebook và Run
 ## Các việc còn phụ thuộc nhóm
 
 1. Cung cấp synthetic pair chính thức từ môn học nếu được yêu cầu. Giữ đúng chiều H B→A; nếu GT là A→B thì nghịch đảo trước khi so sánh, cập nhật provenance và chạy lại notebook. Fixture dịch chuyển hiện tại chỉ kiểm tra tích hợp, không chứng minh trường hợp projective tổng quát.
-2. Upload `Group22_Dataset.zip` vào [Drive nhóm](https://drive.google.com/drive/folders/1tAZe8d2SR47yGxrKt7KvgJqyN25M6P1X?usp=sharing), kiểm tra quyền Anyone with the link. Chưa upload hay xác minh quyền truy cập từ môi trường này.
+2. Upload `Group22_Dataset.zip` vào [Drive nhóm](https://drive.google.com/drive/folders/1KEfstxQ1an5bEngfaHfXl9wIdbXWo2wF?usp=sharing). Quyền tải công khai của thư mục raw đã được xác minh ngày 2026-10-21.
 3. Xác nhận phân loại `site2_outdoor`: ảnh tầng 2 tòa E hướng vào hành lang; `site4_challenging` hướng ra cây xanh. Chưa có chứng cứ việc đăng ký địa điểm với lớp. Không tự đổi nhãn thư mục hoặc khẳng định đã đạt tiêu chí đăng ký.
-4. TV1/TV2 duyệt các giới hạn V0: backend chưa refit H theo toàn bộ inlier, đang average 50/50 thay cho feathering; frontend chưa bất biến xoay/tỷ lệ, xử lý descriptor biên bằng zero. Ảnh đầu ra có vệt nối/bóng kép và notebook ghi rõ điều này.
+4. TV1/TV2 duyệt các giới hạn V0: frontend BRIEF chưa bất biến xoay/tỷ lệ và global homography vẫn gây méo phối cảnh. Stage 6 đã có bù phơi sáng affine có điều kiện và adaptive seam, nhưng không thể phục hồi hình học sai do parallax. Ảnh canvas đầy đủ và bản crop trình bày đều được giữ để báo cáo trung thực các giới hạn này.
