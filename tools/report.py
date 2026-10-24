@@ -30,7 +30,7 @@ def show_correctness(summary):
 def show_panoramas(root, summary):
     fig, axes = plt.subplots(2, 2, figsize=(16, 9))
     for ax, site in zip(axes.flat, SITES):
-        path = root/'outputs_v0'/f'panorama_{site}_cropped.png'
+        path = root/'outputs_v0'/f'panorama_{site}.png'
         with Image.open(path) as image:
             preview = image.copy()
             preview.thumbnail((1400, 800))
