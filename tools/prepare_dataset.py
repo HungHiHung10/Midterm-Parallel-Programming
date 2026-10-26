@@ -58,38 +58,117 @@ def prepare(root=ROOT):
     log('SUCCESS', f'Prepared {len(records)} images; manifest: {manifest}')
     return records
 
+# def synthetic(root=ROOT):
+#     """Local smoke-test fixture, NOT the official course synthetic pair.
+#     Two crops of the same procedural scene; H maps right B to left A.
+#     Exact integer translation exercises all six pipeline stages reproducibly.
+#     """
+#     rng = np.random.default_rng(14120)
+#     scene = Image.new('RGB', (1040, 480), (185, 190, 195))
+#     draw = ImageDraw.Draw(scene)
+#     for _ in range(650):
+#         x, y = (int(rng.integers(0, 1020)), int(rng.integers(0, 460)))
+#         w, h = map(int, rng.integers(5, 32, 2))
+#         color = tuple(map(int, rng.integers(0, 256, 3)))
+#         draw.rectangle((x, y, x+w, y+h), fill=color)
+#     target = root / 'dataset/synthetic'
+#     target.mkdir(parents=True, exist_ok=True)
+#     existing = [(target / name).exists() for name in
+#                 ['synthetic_left.png', 'synthetic_right.png', 'H_ground_truth.txt']]
+#     if all(existing):
+#         log('WARN', 'Existing synthetic pair retained; no files overwritten')
+#         return
+#     if any(existing):
+#         raise FileExistsError('Incomplete existing synthetic pair; restore it before generating a fixture')
+#     scene.crop((0, 0, 640, 480)).save(target / 'synthetic_left.png')
+#     scene.crop((320, 0, 960, 480)).save(target / 'synthetic_right.png')
+#     np.savetxt(target / 'H_ground_truth.txt', [[1, 0, 320], [0, 1, 0], [0, 0, 1]], fmt='%.17g')
+#     (target / 'provenance.json').write_text(json.dumps(dict(
+#         kind='local_generated_translation_fixture', seed=14120,
+#         direction='B_right_to_A_left', official_course_pair=False,
+#         description='Two 640x480 crops of a procedural scene, offset by 320px. '
+#                     'Replace with the course synthetic pair for final course evaluation.'
+#     ), indent=2), encoding='utf-8')
+#     log('SUCCESS', 'Generated local synthetic fixture (not the course-provided pair)')
+
+import math
+import json
+import numpy as np
+from pathlib import Path
+from PIL import Image, ImageDraw
+
 def synthetic(root=ROOT):
-    """Local smoke-test fixture, NOT the official course synthetic pair.
-    Two crops of the same procedural scene; H maps right B to left A.
-    Exact integer translation exercises all six pipeline stages reproducibly.
     """
-    rng = np.random.default_rng(14120)
-    scene = Image.new('RGB', (1040, 480), (185, 190, 195))
+    Tạo cặp ảnh thử nghiệm tỷ lệ 16:9 chứa hình thập giác (decagon) 10 đỉnh.
+    Cắt thành 2 nửa Left-Right với độ đè (overlap) 40% (nằm trong khoảng 30% - 50%).
+    """
+    # 1. Cấu hình kích thước 16:9 cho ảnh crop
+    CROP_W, CROP_H = 640, 360
+    
+    # Overlap = 40% -> Vùng đè = 256px -> OFFSET dịch chuyển = 384px
+    OVERLAP_RATIO = 0.40
+    OFFSET = int(CROP_W * (1 - OVERLAP_RATIO))  # 384 px
+    
+    SCENE_W = OFFSET + CROP_W  # 384 + 640 = 1024 px
+    SCENE_H = CROP_H           # 360 px
+    
+    # 2. Tạo Canvas nền xám nhẹ
+    scene = Image.new('RGB', (SCENE_W, SCENE_H), (245, 245, 248))
     draw = ImageDraw.Draw(scene)
-    for _ in range(650):
-        x, y = (int(rng.integers(0, 1020)), int(rng.integers(0, 460)))
-        w, h = map(int, rng.integers(5, 32, 2))
-        color = tuple(map(int, rng.integers(0, 256, 3)))
-        draw.rectangle((x, y, x+w, y+h), fill=color)
+    
+    # 3. Tính toán 10 đỉnh của hình thập giác đặt ngay tâm vùng Overlap (x = 512, y = 180)
+    cx, cy = SCENE_W // 2, SCENE_H // 2
+    radius = 170
+    num_vertices = 10
+    
+    vertices = []
+    for i in range(num_vertices):
+        angle = 2 * math.pi * i / num_vertices - math.pi / 2
+        vx = int(cx + radius * math.cos(angle))
+        vy = int(cy + radius * math.sin(angle))
+        vertices.append((vx, vy))
+        
+    # 4. Vẽ hình thập giác & các đường chéo nội bộ (tạo góc nhọn cho RANSAC)
+    # 4.1. Tô nền hình thập giác
+    draw.polygon(vertices, fill=(230, 235, 245), outline=(20, 20, 20), width=3)
+    
+    # 4.2. Nối tất cả các cặp đỉnh với nhau để tạo các giao điểm góc nhọn đậm nét
+    for i in range(num_vertices):
+        for j in range(i + 1, num_vertices):
+            draw.line([vertices[i], vertices[j]], fill=(40, 40, 80), width=2)
+            
+    # 4.3. Vẽ các điểm tròn đỏ tại 10 đỉnh
+    r_dot = 8
+    for vx, vy in vertices:
+        draw.ellipse((vx - r_dot, vy - r_dot, vx + r_dot, vy + r_dot), 
+                     fill=(220, 40, 40), outline=(0, 0, 0), width=2)
+
+    # 5. Kiểm tra và Lưu file
     target = root / 'dataset/synthetic'
     target.mkdir(parents=True, exist_ok=True)
     existing = [(target / name).exists() for name in
                 ['synthetic_left.png', 'synthetic_right.png', 'H_ground_truth.txt']]
-    if all(existing):
-        log('WARN', 'Existing synthetic pair retained; no files overwritten')
-        return
-    if any(existing):
-        raise FileExistsError('Incomplete existing synthetic pair; restore it before generating a fixture')
-    scene.crop((0, 0, 640, 480)).save(target / 'synthetic_left.png')
-    scene.crop((320, 0, 960, 480)).save(target / 'synthetic_right.png')
-    np.savetxt(target / 'H_ground_truth.txt', [[1, 0, 320], [0, 1, 0], [0, 0, 1]], fmt='%.17g')
+    # if all(existing):
+    #     log('WARN', 'Existing synthetic pair retained; no files overwritten')
+    #     return
+    # if any(existing):
+    #     raise FileExistsError('Incomplete existing synthetic pair; restore it before generating a fixture')
+        
+    # Crop ảnh Left (0 -> 640) và Right (384 -> 1024) chuẩn 16:9
+    scene.crop((0, 0, CROP_W, CROP_H)).save(target / 'synthetic_left.png')
+    scene.crop((OFFSET, 0, OFFSET + CROP_W, CROP_H)).save(target / 'synthetic_right.png')
+    # BỔ SUNG: Lưu bức ảnh toàn cảnh gốc (Ground Truth Scene / Panorama)
+    scene.save(target / 'synthetic_scene.png')
+    # Ma trận Homography tịnh tiến
+    np.savetxt(target / 'H_ground_truth.txt', [[1, 0, OFFSET], [0, 1, 0], [0, 0, 1]], fmt='%.17g')
+    
     (target / 'provenance.json').write_text(json.dumps(dict(
         kind='local_generated_translation_fixture', seed=14120,
         direction='B_right_to_A_left', official_course_pair=False,
-        description='Two 640x480 crops of a procedural scene, offset by 320px. '
-                    'Replace with the course synthetic pair for final course evaluation.'
+        description=f'Two {CROP_W}x{CROP_H} (16:9) crops of a decagon scene, offset by {OFFSET}px ({int(OVERLAP_RATIO*100)}% overlap).'
     ), indent=2), encoding='utf-8')
-    log('SUCCESS', 'Generated local synthetic fixture (not the course-provided pair)')
+    
+    log('SUCCESS', f'Generated local synthetic fixture with decagon (16:9, {int(OVERLAP_RATIO*100)}% overlap)')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

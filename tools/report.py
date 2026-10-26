@@ -13,19 +13,53 @@ def table(headers, rows):
     display(Markdown('| ' + ' | '.join(headers) + ' |\n|' + '|'.join(['---']*len(headers)) + '|\n'
                      + '\n'.join('| ' + ' | '.join(map(str, row)) + ' |' for row in rows)))
 
-def show_correctness(summary):
+def show_correctness(summary, root=None):
+    if root is None:
+        from build import ROOT as root
     c = summary['correctness']
     if not c['success']:
         raise RuntimeError(c['error'])
+        
     display(Markdown('**Synthetic provenance:** ' + c['provenance'].get('kind', 'unknown')))
     print('H estimated (B -> A):\n', np.array(c['H_estimated']))
     print('H ground truth (B -> A):\n', np.array(c['H_ground_truth']))
+    
+    # 1. Hiển thị bảng số liệu sai số
     table(['Metric', 'Measured value'], [
         ['Frobenius norm (H normalized by H[2,2])', f"{c['frobenius_error']:.6e}"],
         ['Mean projection error (px)', f"{c['projection_mean_px']:.6e}"],
         ['Max projection error (px)', f"{c['projection_max_px']:.6e}"],
         ['Pass threshold (mean px)', c['threshold_px']], ['Passed', c['passed']]])
     assert c['passed'], 'Synthetic error exceeds the declared threshold'
+    
+    # 2. Hiển thị trực quan xếp thành 3 HÀNG (3 rows)
+    fig = plt.figure(figsize=(10, 11))
+    
+    # Hàng 1: Cặp ảnh crop Left & Right (2 cột ở hàng 1)
+    ax1 = fig.add_subplot(3, 2, 1)
+    ax1.imshow(Image.open(root / 'dataset/synthetic/synthetic_left.png'))
+    ax1.set_title('Synthetic Left (Image A)')
+    ax1.axis('off')
+    
+    ax2 = fig.add_subplot(3, 2, 2)
+    ax2.imshow(Image.open(root / 'dataset/synthetic/synthetic_right.png'))
+    ax2.set_title('Synthetic Right (Image B)')
+    ax2.axis('off')
+    
+    # Hàng 2: Ảnh toàn cảnh gốc Ground Truth
+    ax3 = fig.add_subplot(3, 1, 2)
+    ax3.imshow(Image.open(root / 'dataset/synthetic/synthetic_scene.png'))
+    ax3.set_title('Synthetic Scene (Ground Truth)')
+    ax3.axis('off')
+    
+    # Hàng 3: Ảnh Panorama sau khi ghép
+    ax4 = fig.add_subplot(3, 1, 3)
+    ax4.imshow(Image.open(root / 'outputs_v0/synthetic_panorama.png'))
+    ax4.set_title('Synthetic Panorama (V0 Stitched)')
+    ax4.axis('off')
+    
+    fig.tight_layout()
+    plt.show()
 
 def show_panoramas(root, summary):
     fig, axes = plt.subplots(2, 2, figsize=(16, 9))
