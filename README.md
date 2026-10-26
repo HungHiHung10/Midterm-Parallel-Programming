@@ -7,6 +7,7 @@ Bản thực hiện gồm khung chương trình, log màu, dữ liệu chuẩn h
 ```powershell
 python -m pip install -r requirements.txt
 python tools/prepare_dataset.py
+python tools/prepare_dataset.py --synthetic-only --procedural-synthetic
 python tools/build.py
 python tools/verify_cli.py
 python tools/execute_notebook.py
@@ -42,7 +43,7 @@ g++ -O3 -std=c++14 -x c++ src/main.cu src/stb_impl.cpp src/v0_frontend.cpp src/v
 
 ## Colab
 
-Giải nén hai ZIP vào cùng `/content/Group22_Midterm`, mở notebook và Run all. Hoặc đặt các thư mục/file tương ứng vào `MyDrive/Group22_Midterm`; sửa `DRIVE_PROJECT` trong setup cell rồi Run all để mount và copy. Notebook biên dịch trực tiếp từ `src/`, không sinh bản sao thuật toán C++ trong cell. Cần dataset hiện diện, không chỉ notebook/src.
+Giải nén hai ZIP vào cùng `/content/Group22_Midterm`, mở notebook và Run all. Cell tải dataset trong notebook sẽ đồng bộ lại tám raw images từ [Google Drive nhóm](https://drive.google.com/drive/folders/1KEfstxQ1an5bEngfaHfXl9wIdbXWo2wF?usp=sharing) trước khi chuẩn bị dữ liệu; cần cài `gdown` (đã thêm vào `requirements.txt`). Hoặc đặt các thư mục/file tương ứng vào `MyDrive/Group22_Midterm`; sửa `DRIVE_PROJECT` trong setup cell rồi Run all để mount và copy project. Notebook biên dịch trực tiếp từ `src/`, không sinh bản sao thuật toán C++ trong cell.
 
 Đã chạy notebook bằng kernel Python trên Windows; chưa có phiên Colab để xác nhận trực tiếp. Đo lại trên Colab sẽ thay đổi số liệu theo CPU/compiler. Phần CUDA utilities chưa được chạy thử với nvcc/GPU tại máy này.
 

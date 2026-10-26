@@ -3,7 +3,7 @@
     "site": "site1_indoor",
     "side": "left",
     "resolution": "small",
-    "source": "dataset/raw/indoor_left.heic",
+    "source": "dataset/raw/indoor_left.HEIC",
     "source_sha256": "36db8c6cfcc5860aaeb6f589e7b6becc13ddc812765e89474b63dfc053cdec13",
     "original_size": [
       4032,
@@ -26,7 +26,7 @@
     "site": "site1_indoor",
     "side": "left",
     "resolution": "medium",
-    "source": "dataset/raw/indoor_left.heic",
+    "source": "dataset/raw/indoor_left.HEIC",
     "source_sha256": "36db8c6cfcc5860aaeb6f589e7b6becc13ddc812765e89474b63dfc053cdec13",
     "original_size": [
       4032,
@@ -49,7 +49,7 @@
     "site": "site1_indoor",
     "side": "left",
     "resolution": "large",
-    "source": "dataset/raw/indoor_left.heic",
+    "source": "dataset/raw/indoor_left.HEIC",
     "source_sha256": "36db8c6cfcc5860aaeb6f589e7b6becc13ddc812765e89474b63dfc053cdec13",
     "original_size": [
       4032,
@@ -72,7 +72,7 @@
     "site": "site1_indoor",
     "side": "right",
     "resolution": "small",
-    "source": "dataset/raw/indoor_right.heic",
+    "source": "dataset/raw/indoor_right.HEIC",
     "source_sha256": "a062238d9577e419f7ffcf3718684933f9a31b327c0c558878ec7e838baf869d",
     "original_size": [
       4032,
@@ -95,7 +95,7 @@
     "site": "site1_indoor",
     "side": "right",
     "resolution": "medium",
-    "source": "dataset/raw/indoor_right.heic",
+    "source": "dataset/raw/indoor_right.HEIC",
     "source_sha256": "a062238d9577e419f7ffcf3718684933f9a31b327c0c558878ec7e838baf869d",
     "original_size": [
       4032,
@@ -118,7 +118,7 @@
     "site": "site1_indoor",
     "side": "right",
     "resolution": "large",
-    "source": "dataset/raw/indoor_right.heic",
+    "source": "dataset/raw/indoor_right.HEIC",
     "source_sha256": "a062238d9577e419f7ffcf3718684933f9a31b327c0c558878ec7e838baf869d",
     "original_size": [
       4032,
@@ -141,7 +141,7 @@
     "site": "site2_outdoor",
     "side": "left",
     "resolution": "small",
-    "source": "dataset/raw/outdoor_left.heic",
+    "source": "dataset/raw/outdoor_left.HEIC",
     "source_sha256": "85a6acc81f751117408762de86e148b0aa97b6a139fe3656ef6c0b20298355e0",
     "original_size": [
       4032,
@@ -164,7 +164,7 @@
     "site": "site2_outdoor",
     "side": "left",
     "resolution": "medium",
-    "source": "dataset/raw/outdoor_left.heic",
+    "source": "dataset/raw/outdoor_left.HEIC",
     "source_sha256": "85a6acc81f751117408762de86e148b0aa97b6a139fe3656ef6c0b20298355e0",
     "original_size": [
       4032,
@@ -187,7 +187,7 @@
     "site": "site2_outdoor",
     "side": "left",
     "resolution": "large",
-    "source": "dataset/raw/outdoor_left.heic",
+    "source": "dataset/raw/outdoor_left.HEIC",
     "source_sha256": "85a6acc81f751117408762de86e148b0aa97b6a139fe3656ef6c0b20298355e0",
     "original_size": [
       4032,
@@ -210,7 +210,7 @@
     "site": "site2_outdoor",
     "side": "right",
     "resolution": "small",
-    "source": "dataset/raw/outdoor_right.heic",
+    "source": "dataset/raw/outdoor_right.HEIC",
     "source_sha256": "0151fcedd787b9700baf8612b40b2a9b7f488f1ef3c825125390b9907202a15b",
     "original_size": [
       4032,
@@ -233,7 +233,7 @@
     "site": "site2_outdoor",
     "side": "right",
     "resolution": "medium",
-    "source": "dataset/raw/outdoor_right.heic",
+    "source": "dataset/raw/outdoor_right.HEIC",
     "source_sha256": "0151fcedd787b9700baf8612b40b2a9b7f488f1ef3c825125390b9907202a15b",
     "original_size": [
       4032,
@@ -256,7 +256,7 @@
     "site": "site2_outdoor",
     "side": "right",
     "resolution": "large",
-    "source": "dataset/raw/outdoor_right.heic",
+    "source": "dataset/raw/outdoor_right.HEIC",
     "source_sha256": "0151fcedd787b9700baf8612b40b2a9b7f488f1ef3c825125390b9907202a15b",
     "original_size": [
       4032,
@@ -279,7 +279,7 @@
     "site": "site3_custom",
     "side": "left",
     "resolution": "small",
-    "source": "dataset/raw/custom_left.heic",
+    "source": "dataset/raw/custom_left.HEIC",
     "source_sha256": "6f1e2e4468e672b1de18d6f3b49fc2647a458e9a02dbf22fb320a522606e0d35",
     "original_size": [
       4032,
@@ -302,7 +302,7 @@
     "site": "site3_custom",
     "side": "left",
     "resolution": "medium",
-    "source": "dataset/raw/custom_left.heic",
+    "source": "dataset/raw/custom_left.HEIC",
     "source_sha256": "6f1e2e4468e672b1de18d6f3b49fc2647a458e9a02dbf22fb320a522606e0d35",
     "original_size": [
       4032,
@@ -325,7 +325,7 @@
     "site": "site3_custom",
     "side": "left",
     "resolution": "large",
-    "source": "dataset/raw/custom_left.heic",
+    "source": "dataset/raw/custom_left.HEIC",
     "source_sha256": "6f1e2e4468e672b1de18d6f3b49fc2647a458e9a02dbf22fb320a522606e0d35",
     "original_size": [
       4032,
@@ -348,7 +348,7 @@
     "site": "site3_custom",
     "side": "right",
     "resolution": "small",
-    "source": "dataset/raw/custom_right.heic",
+    "source": "dataset/raw/custom_right.HEIC",
     "source_sha256": "5164ee289563f823135c1862812c180d6dce296b4805df247ce875c543bcf6f7",
     "original_size": [
       4032,
@@ -371,7 +371,7 @@
     "site": "site3_custom",
     "side": "right",
     "resolution": "medium",
-    "source": "dataset/raw/custom_right.heic",
+    "source": "dataset/raw/custom_right.HEIC",
     "source_sha256": "5164ee289563f823135c1862812c180d6dce296b4805df247ce875c543bcf6f7",
     "original_size": [
       4032,
@@ -394,7 +394,7 @@
     "site": "site3_custom",
     "side": "right",
     "resolution": "large",
-    "source": "dataset/raw/custom_right.heic",
+    "source": "dataset/raw/custom_right.HEIC",
     "source_sha256": "5164ee289563f823135c1862812c180d6dce296b4805df247ce875c543bcf6f7",
     "original_size": [
       4032,
@@ -417,7 +417,7 @@
     "site": "site4_challenging",
     "side": "left",
     "resolution": "small",
-    "source": "dataset/raw/challenging_left.heic",
+    "source": "dataset/raw/challenging_left.HEIC",
     "source_sha256": "4b762abdcfc269da7e97d0f3c84b63f3f3559698a6cdf4d80c761e4aa9998ba3",
     "original_size": [
       4032,
@@ -440,7 +440,7 @@
     "site": "site4_challenging",
     "side": "left",
     "resolution": "medium",
-    "source": "dataset/raw/challenging_left.heic",
+    "source": "dataset/raw/challenging_left.HEIC",
     "source_sha256": "4b762abdcfc269da7e97d0f3c84b63f3f3559698a6cdf4d80c761e4aa9998ba3",
     "original_size": [
       4032,
@@ -463,7 +463,7 @@
     "site": "site4_challenging",
     "side": "left",
     "resolution": "large",
-    "source": "dataset/raw/challenging_left.heic",
+    "source": "dataset/raw/challenging_left.HEIC",
     "source_sha256": "4b762abdcfc269da7e97d0f3c84b63f3f3559698a6cdf4d80c761e4aa9998ba3",
     "original_size": [
       4032,
@@ -486,7 +486,7 @@
     "site": "site4_challenging",
     "side": "right",
     "resolution": "small",
-    "source": "dataset/raw/challenging_right.heic",
+    "source": "dataset/raw/challenging_right.HEIC",
     "source_sha256": "42918283d910056edc0768e86c7302657b2f56b7b91079d20573647eb8310056",
     "original_size": [
       4032,
@@ -509,7 +509,7 @@
     "site": "site4_challenging",
     "side": "right",
     "resolution": "medium",
-    "source": "dataset/raw/challenging_right.heic",
+    "source": "dataset/raw/challenging_right.HEIC",
     "source_sha256": "42918283d910056edc0768e86c7302657b2f56b7b91079d20573647eb8310056",
     "original_size": [
       4032,
@@ -532,7 +532,7 @@
     "site": "site4_challenging",
     "side": "right",
     "resolution": "large",
-    "source": "dataset/raw/challenging_right.heic",
+    "source": "dataset/raw/challenging_right.HEIC",
     "source_sha256": "42918283d910056edc0768e86c7302657b2f56b7b91079d20573647eb8310056",
     "original_size": [
       4032,

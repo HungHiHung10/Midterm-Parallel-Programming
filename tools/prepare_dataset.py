@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 import numpy as np
 from PIL import Image, ImageOps, ImageDraw
+from PIL import UnidentifiedImageError
 
 SITES = ['site1_indoor', 'site2_outdoor', 'site3_custom', 'site4_challenging']
 RAW_STEMS = {
@@ -28,11 +29,28 @@ def prepare(root=ROOT):
         stem = RAW_STEMS[site]
         sources = {}
         for side in ['left', 'right']:
-            files = sorted(raw_dir.glob(f'{stem}_{side}.*'))
+            expected = f'{stem}_{side}'.lower()
+            # Google Drive may preserve HEIC/JPG content without an extension.
+            # Accept both an exact extensionless name and name.ext variants.
+            files = sorted(
+                path for path in raw_dir.iterdir()
+                if path.is_file() and (
+                    path.name.lower() == expected
+                    or path.name.lower().startswith(expected + '.')
+                )
+            )
+            if len(files) > 1:
+                # A Drive sync can leave both "outdoor_left" and
+                # "outdoor_left.HEIC". If their bytes are identical, keep the
+                # extension-bearing copy and continue; conflicting images are
+                # rejected instead of being selected arbitrarily.
+                hashes = {hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+                if len(hashes) == 1:
+                    files = sorted(files, key=lambda path: (not bool(path.suffix), path.name.lower()))[:1]
             if len(files) != 1:
                 raise ValueError(
                     f'{site}/{side}: expected exactly one raw file named '
-                    f'{stem}_{side}.<extension>, found {len(files)}')
+                    f'{stem}_{side} or {stem}_{side}.<extension>, found {len(files)}')
             sources[side] = files[0]
         for side, source in sources.items():
             with Image.open(source) as original:
@@ -70,7 +88,7 @@ try:
 except ImportError:
     pass
 
-def synthetic(root=ROOT):
+def synthetic(root=ROOT, procedural=False):
     """
     Đọc ảnh Ground Truth sẵn có (synthetic_GT.HEIC), tự động tính toán 
     và cắt thành 2 nửa Left - Right với độ đè (overlap) 40%.
@@ -78,11 +96,20 @@ def synthetic(root=ROOT):
     target = root / 'dataset/synthetic'
     gt_path = target / 'synthetic_GT.HEIC'
     
+    if procedural:
+        return synthetic_procedural(root)
+
     if not gt_path.exists():
-        raise FileNotFoundError(f"Không tìm thấy ảnh Ground Truth tại: {gt_path}")
-        
-    # 1. Mở file ảnh HEIC và chuyển sang định dạng RGB
-    scene = Image.open(gt_path).convert('RGB')
+        log('WARN', f'Không tìm thấy {gt_path}; dùng synthetic procedural.')
+        return synthetic_procedural(root)
+
+    # 1. Mở file HEIC/ảnh GT và chuyển sang định dạng RGB. Nếu file chỉ
+    # mang đuôi HEIC nhưng nội dung không hợp lệ, dùng fixture fallback.
+    try:
+        scene = Image.open(gt_path).convert('RGB')
+    except (UnidentifiedImageError, OSError) as error:
+        log('WARN', f'Không đọc được {gt_path.name} ({error}); dùng synthetic procedural.')
+        return synthetic_procedural(root)
     SCENE_W, SCENE_H = scene.size
     
     # 2. Tính toán CROP_W và OFFSET dựa trên tỷ lệ đè 40%
@@ -124,7 +151,9 @@ def synthetic(root=ROOT):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--synthetic-only', action='store_true')
+    parser.add_argument('--procedural-synthetic', action='store_true',
+                        help='Bỏ qua synthetic_GT.HEIC và tạo fixture procedural xác định.')
     args = parser.parse_args()
     if not args.synthetic_only:
         prepare()
-    synthetic()
+    synthetic(procedural=args.procedural_synthetic)
